@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#16233d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Entrevistas">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon-192.png">
+<title>Ficha de Entrevista com Trabalhador</title>
+<style>
+  :root{
+    --navy:#16233d; --navy-2:#22365c; --paper:#f6f4ee; --paper-2:#ffffff;
+    --line:#d8d3c4; --gold:#a9791f; --gold-2:#8a611a; --ink:#1c1c1a; --ink-soft:#5a5750;
+    --alert:#8c3a2b; --alert-bg:#f7ebe8;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{background:var(--paper);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;padding-bottom:100px;}
+  header{background:var(--navy);color:#f2efe6;padding:16px 16px 14px;position:sticky;top:0;z-index:10;box-shadow:0 2px 10px rgba(0,0,0,.15);}
+  header .eyebrow{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#b9c2d4;margin:0 0 2px;font-weight:600;display:flex;justify-content:space-between;}
+  header h1{margin:0;font-size:18px;font-weight:700;letter-spacing:-.01em;}
+  nav.tabs{display:flex;margin-top:12px;border-bottom:1px solid rgba(255,255,255,.15);}
+  nav.tabs button{flex:1;background:none;border:none;color:#b9c2d4;font-size:13px;font-weight:600;padding:9px 4px 10px;cursor:pointer;border-bottom:2px solid transparent;}
+  nav.tabs button.active{color:#fff;border-bottom:2px solid var(--gold);}
+  main{padding:14px;max-width:640px;margin:0 auto;}
+  .card{background:var(--paper-2);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:10px;}
+  .card.highlight{border-color:var(--gold);border-width:2px;background:#fffdf6;}
+  .section-label{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--gold-2);margin:0 0 9px;display:flex;align-items:center;gap:8px;}
+  .section-label::after{content:"";flex:1;height:1px;background:var(--line);}
+  label{display:block;font-size:12px;font-weight:600;color:var(--ink-soft);margin:10px 0 5px;}
+  label:first-of-type{margin-top:0;}
+  input[type=text], input[type=date], input[type=time], input[type=month], textarea, select{width:100%;border:1px solid var(--line);background:#fff;border-radius:7px;padding:10px 12px;font-size:15px;font-family:inherit;color:var(--ink);}
+  input:focus, textarea:focus, select:focus{outline:2px solid var(--gold);outline-offset:1px;border-color:var(--gold);}
+  textarea{resize:vertical;min-height:58px;line-height:1.4;}
+  .choice-group{display:flex;flex-wrap:wrap;gap:6px;}
+  .choice{border:1px solid var(--line);background:#fff;padding:8px 12px;border-radius:20px;font-size:13px;font-weight:600;color:var(--ink-soft);cursor:pointer;user-select:none;white-space:nowrap;}
+  .choice.sel{background:var(--navy);border-color:var(--navy);color:#fff;}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .rowSal{display:grid;grid-template-columns:1.1fr 1fr;gap:10px;}
+  .row4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;}
+  .hint{font-size:11.5px;color:var(--ink-soft);margin-top:4px;}
+  .quickbar{display:flex;gap:8px;margin-bottom:10px;overflow-x:auto;padding-bottom:2px;}
+  .quickbar button{flex:0 0 auto;background:#eee7d3;border:1px solid #ddd0a5;color:var(--gold-2);font-weight:700;font-size:12.5px;padding:9px 13px;border-radius:8px;cursor:pointer;white-space:nowrap;}
+  .subgroup{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);}
+  .subgroup.hidden{display:none;}
+  .dow{display:flex;gap:5px;}
+  .dow .choice{flex:1;text-align:center;padding:8px 0;font-size:12px;}
+  .dupe-warn{background:var(--alert-bg);border:1px solid #e0bdb4;color:var(--alert);font-size:12.5px;font-weight:600;padding:9px 11px;border-radius:7px;margin-top:8px;display:none;}
+  .dupe-warn.show{display:block;}
+  .actions-bar{position:fixed;left:0;right:0;bottom:0;background:var(--paper-2);border-top:1px solid var(--line);padding:10px 14px calc(10px + env(safe-area-inset-bottom));display:flex;gap:8px;max-width:640px;margin:0 auto;}
+  button.primary{flex:1.3;background:var(--navy);color:#fff;border:none;border-radius:8px;padding:13px 8px;font-size:14px;font-weight:700;cursor:pointer;}
+  button.primary.secondary-fill{background:var(--gold-2);}
+  button.primary:active{filter:brightness(1.15);}
+  button.ghost{flex:1;background:none;border:1px solid var(--line);color:var(--ink-soft);border-radius:8px;padding:13px 6px;font-size:12.5px;font-weight:600;cursor:pointer;}
+  .emp-group{margin-bottom:16px;}
+  .emp-header{display:flex;justify-content:space-between;align-items:center;background:var(--navy);color:#fff;padding:10px 13px;border-radius:8px 8px 0 0;cursor:pointer;}
+  .emp-name{font-weight:700;font-size:14.5px;}
+  .emp-count{font-size:11.5px;color:#cfd6e3;font-weight:600;}
+  .emp-body{border:1px solid var(--line);border-top:none;border-radius:0 0 8px 8px;padding:10px;background:#fbfaf6;}
+  .emp-body.collapsed{display:none;}
+  .emp-actions{display:flex;gap:8px;margin-bottom:10px;}
+  .emp-actions button{flex:1;background:#eee7d3;border:1px solid #ddd0a5;color:var(--gold-2);font-weight:700;font-size:12px;padding:8px;border-radius:7px;cursor:pointer;}
+  .entry{background:var(--paper-2);border:1px solid var(--line);border-radius:8px;padding:11px 12px;margin-bottom:8px;cursor:pointer;}
+  .entry:last-child{margin-bottom:0;}
+  .entry-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px;}
+  .entry-name{font-weight:700;font-size:14.5px;}
+  .entry-date{font-size:11.5px;color:var(--ink-soft);white-space:nowrap;}
+  .entry-meta{font-size:12.5px;color:var(--ink-soft);margin-top:3px;}
+  .flags{margin-top:6px;display:flex;flex-wrap:wrap;gap:4px;}
+  .flag{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;padding:2px 6px;border-radius:4px;background:var(--alert-bg);color:var(--alert);}
+  .empty{text-align:center;padding:50px 20px;color:var(--ink-soft);}
+  .empty .big{font-size:34px;margin-bottom:8px;}
+  .search-bar{margin-bottom:12px;}
+  .toast{position:fixed;top:14px;left:50%;transform:translateX(-50%);background:var(--navy);color:#fff;padding:10px 18px;border-radius:20px;font-size:13.5px;font-weight:600;z-index:100;opacity:0;pointer-events:none;transition:opacity .25s, top .25s;max-width:85vw;text-align:center;}
+  .toast.show{opacity:1;top:70px;}
+  .detail-field{margin-bottom:11px;}
+  .detail-label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--gold-2);font-weight:700;margin-bottom:2px;}
+  .detail-value{font-size:14.5px;line-height:1.45;}
+  .detail-section-title{font-size:12px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.06em;margin:16px 0 8px;}
+  .detail-section-title:first-child{margin-top:0;}
+  .top-actions{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:8px;}
+  .icon-btn{background:none;border:none;color:var(--ink-soft);font-size:13px;font-weight:600;cursor:pointer;padding:4px;}
+  .legal-note{font-size:10.5px;color:var(--ink-soft);text-align:center;line-height:1.5;padding:10px 6px 0;}
+  .sum-row{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--line);font-size:13.5px;}
+  .sum-row:last-child{border-bottom:none;}
+  .sum-val{font-weight:700;}
+  .sum-val.bad{color:var(--alert);}
+  #print-area{display:none;}
+  @media print{
+    body *{visibility:hidden;}
+    #print-area, #print-area *{visibility:visible;}
+    #print-area{display:block;position:absolute;left:0;top:0;width:100%;padding:0;background:#fff;color:#111;}
+    .p-emp-title{page-break-before:always;font-family:Georgia,'Times New Roman',serif;font-size:15px;font-weight:700;background:#16233d;color:#fff;padding:8px 12px;margin:0 26px 0;}
+    .p-emp-title:first-child{page-break-before:auto;}
+    .p-entry{page-break-after:always;padding:20px 26px;font-family:Georgia,'Times New Roman',serif;}
+    .p-entry:last-child{page-break-after:auto;}
+    .p-title{font-size:15px;font-weight:700;border-bottom:2px solid #16233d;padding-bottom:6px;margin-bottom:3px;}
+    .p-sub{font-size:10px;color:#555;margin-bottom:12px;}
+    .p-section{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#16233d;margin:11px 0 4px;border-bottom:1px solid #16233d;padding-bottom:2px;}
+    .p-row{display:flex;border-bottom:1px solid #ddd;padding:4px 0;font-size:11px;}
+    .p-row .p-label{width:40%;font-weight:700;color:#333;}
+    .p-row .p-value{width:60%;}
+    .p-block{margin-top:8px;}
+    .p-block .p-label{font-weight:700;font-size:10.5px;margin-bottom:2px;color:#333;}
+    .p-block .p-value{font-size:11px;line-height:1.4;}
+    .p-legal{margin-top:14px;padding-top:8px;border-top:1px solid #999;font-size:9px;color:#555;line-height:1.4;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <p class="eyebrow"><span>Ficha de campo · uso offline</span><span id="draft-indicator"></span></p>
+  <h1>Entrevista com Trabalhador</h1>
+  <nav class="tabs">
+    <button class="active" data-tab="new">Nova ficha</button>
+    <button data-tab="list">Registros</button>
+    <button data-tab="resumo">Resumo</button>
+  </nav>
+</header>
+
+<main>
+
+  <div id="tab-new">
+    <div class="quickbar">
+      <button id="btn-repeat-local">↺ Repetir empregador</button>
+      <button id="btn-clear-all">Limpar tudo</button>
+    </div>
+
+    <div class="card highlight">
+      <p class="section-label">Empregador e data</p>
+      <label>Nome do empregador</label>
+      <input type="text" id="f-empregador" list="empregadores-list" placeholder="Ex.: Sítio Arcanjo">
+      <datalist id="empregadores-list"></datalist>
+      <label>Data da entrevista</label>
+      <input type="date" id="f-data">
+    </div>
+
+    <div class="card">
+      <p class="section-label">Identificação do trabalhador</p>
+      <label>Nome completo</label>
+      <input type="text" id="f-nome" placeholder="Nome do trabalhador">
+      <label>CPF</label>
+      <input type="text" id="f-cpf" inputmode="numeric" placeholder="Somente números">
+      <div class="dupe-warn" id="dupe-warn"></div>
+      <label>Data de nascimento</label>
+      <input type="date" id="f-nascimento">
+      <label>Nome da mãe</label>
+      <input type="text" id="f-mae" placeholder="Opcional">
+      <label>Gênero</label>
+      <div class="choice-group" data-group="genero">
+        <div class="choice" data-val="Masculino">Masculino</div>
+        <div class="choice" data-val="Feminino">Feminino</div>
+        <div class="choice" data-val="Outro">Outro</div>
+      </div>
+      <label>Onde nasceu (cidade/estado)</label>
+      <input type="text" id="f-naturalidade" placeholder="Opcional">
+    </div>
+
+    <div class="card">
+      <p class="section-label">Função e vínculo</p>
+      <label>Função</label>
+      <input type="text" id="f-funcao" placeholder="Toque em uma opção ou digite">
+      <div class="choice-group" id="funcao-freq"></div>
+      <label>Quando começou a trabalhar (mês/ano)</label>
+      <input type="month" id="f-inicio">
+      <label>Carteira de trabalho registrada?</label>
+      <div class="choice-group" data-group="carteira">
+        <div class="choice" data-val="Sim">Sim</div>
+        <div class="choice" data-val="Não">Não</div>
+        <div class="choice" data-val="Não sabe">Não sabe</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <p class="section-label">Remuneração</p>
+      <div class="rowSal">
+        <div><label>Salário (R$)</label><input type="text" id="f-salario" inputmode="decimal" placeholder="Ex.: 75,00"></div>
+        <div>
+          <label>Por</label>
+          <div class="choice-group" data-group="salarioUnidade">
+            <div class="choice" data-val="Dia">Dia</div>
+            <div class="choice" data-val="Mês">Mês</div>
+            <div class="choice" data-val="Produção">Produção</div>
+          </div>
+        </div>
+      </div>
+      <label>Forma de pagamento</label>
+      <div class="choice-group" data-group="formaPagamento">
+        <div class="choice" data-val="Pix">Pix</div>
+        <div class="choice" data-val="Dinheiro">Dinheiro</div>
+        <div class="choice" data-val="Depósito">Depósito</div>
+      </div>
+      <label>Periodicidade</label>
+      <div class="choice-group" data-group="periodicidade">
+        <div class="choice" data-val="Semanal">Semanal</div>
+        <div class="choice" data-val="Quinzenal">Quinzenal</div>
+        <div class="choice" data-val="Mensal">Mensal</div>
+      </div>
+      <label>Atraso de salário?</label>
+      <div class="choice-group" data-group="atrasoSalario">
+        <div class="choice" data-val="Sim">Sim</div>
+        <div class="choice" data-val="Não">Não</div>
+      </div>
+      <label>13º pago?</label>
+      <div class="choice-group" data-group="decimoTerceiro">
+        <div class="choice" data-val="Sim">Sim</div>
+        <div class="choice" data-val="Não">Não</div>
+        <div class="choice" data-val="Não se aplica">N/A</div>
+      </div>
+      <label>Férias em dia?</label>
+      <div class="choice-group" data-group="feriasEmDia">
+        <div class="choice" data-val="Sim">Sim</div>
+        <div class="choice" data-val="Não">Não</div>
+        <div class="choice" data-val="Não se aplica">N/A</div>
+      </div>
+      <label>Vale-transporte?</label>
+      <div class="choice-group" data-group="valeTransporte">
+        <div class="choice" data-val="Sim">Sim</div>
+        <div class="choice" data-val="Não">Não</div>
+      </div>
+      <div class="subgroup hidden" id="sub-vt">
+        <label>Valor / tipo</label>
+        <input type="text" id="f-valeTransporteDetalhe" placeholder="Ex.: R$ 12,00/dia ou cartão">
+      </div>
+      <label>Vale-alimentação?</label>
+      <div class="choice-group" data-group="valeAlimentacao">
+        <div class="choice" data-val="Sim">Sim</div>
+        <div class="choice" data-val="Não">Não</div>
+      </div>
+      <div class="subgroup hidden" id="sub-va">
+        <label>Valor / tipo</label>
+        <input type="text" id="f-valeAlimentacaoDetalhe" placeholder="Ex.: R$ 25,00/dia ou cesta">
+      </div>
+      <label>O empregador desconta valores?</label>
+      <div class="choice-group" data-group="desconta">
+        <div class="choice" data-val="Sim">Sim</div>
+        <div class="choice" data-val="Não">Não</div>
+      </div>
+      <div class="subgroup hidden" id="sub-desconta">
+        <label>Quais valores?</label>
+        <input type="text" id="f-descontaQuais" placeholder="Ex.: alimentação, moradia, ferramentas">
+      </div>
+    </div>
+
+    <div class="card">
+      <p class="section-label">Jornada de trabalho</p>
+      <label>Horário habitual</label>
+      <div class="row4">
+        <div><label style="margin:0 0 4px;font-size:11px;">Entrada</label><input type="time" id="f-entrada"></div>
+        <div><label style="margin:0 0 4px;font-size:11px;">Saída interv.</label><input type="time" id="f-saidaIntervalo"></div>
+        <div><label style="margin:0 0 4px;font-size:11px;">Retorno</label><input type="time" id="f-retornoIntervalo"></div>
+        <div><label style="margin:0 0 4px;font-size:11px;">Saída</label><input type="time" id="f-saida"></div>
+      </div>
+      <label>Dias trabalhados na semana</label>
+      <div class="choice-group dow" data-group="diasSemana" data-multi="true">
+        <div class="choice" data-val="Dom">Dom</div>
+        <div class="choice" data-val="Seg">Seg</div>
+        <div class="choice" data-val="Ter">Ter</div>
+        <div class="choice" data-val="Qua">Qua</div>
+        <div class="choice" data-val="Qui">Qui</div>
+        <div class="choice" data-val="Sex">Sex</div>
+        <div class="choice" data-val="Sáb">Sáb</div>
+      </div>
+      <label>Dias com horário diferente do habitual</label>
+      <textarea id="f-jornadaExcecoes" placeholder="Ex.: sábado só até 12h; na safra entra 5h"></textarea>
+      <label>Folgas</label>
+      <input type="text" id="f-folgas" placeholder="Ex.: domingos alternados">
+      <label>Faz horas extras?</label>
+      <div class="choice-group" data-group="horasExtras">
+        <div class="choice" data-val="Sim">Sim</div>
+        <div class="choice" data-val="Não">Não</div>
+      </div>
+      <div class="subgroup hidden" id="sub-he">
+        <label>Compensadas ou pagas?</label>
+        <div class="choice-group" data-group="horasExtrasTipo">
+          <div class="choice" data-val="Compensadas">Compensadas</div>
+          <div class="choice" data-val="Pagas">Pagas</div>
+          <div class="choice" data-val="Nem uma nem outra">Nenhuma</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <p class="section-label">Treinamento, exames e EPI</p>
+      <label>Treinamento admissional?</label>
+      <div class="choice-group" data-group="treinamentoAdmissional">
+        <div class="choice" data-val="Sim">Sim</div>
+        <div class="choice" data-val="Não">Não</div>
+      </div>
+      <label>Treinamento periódico?</label>
+      <div class="choice-group" data-group="treinamentoPeriodico">
+        <div class="choice" data-val="Sim">Sim</div>
+        <div class="choice" data-val="Não">Não</div>
+      </div>
+      <label>Último treinamento (mês/ano)</label>
+      <input type="month" id="f-ultimoTreinamento">
+      <label>Exame admissional realizado?</label>
+      <div class="choice-group" data-group="exameAdmissional">
+        <div class="choice" data-val="Sim">Sim</div>
+        <div class="choice" data-val="Não">Não</div>
+      </div>
+      <label>Exame periódico em dia?</label>
+      <div class="choice-group" data-group="examePeriodico">
+        <div class="choice" data-val="Sim">Sim</div>
+        <div class="choice" data-val="Não">Não</div>
+      </div>
+      <label>Último exame (mês/ano)</label>
+      <input type="month" id="f-ultimoExame">
+      <label>Recebeu EPI?</label>
+      <div class="choice-group" data-group="epiRecebeu">
+        <div class="choice" data-val="Sim">Sim</div>
+        <div class="choice" data-val="Não">Não</div>
+        <div class="choice" data-val="Parcial">Parcial</div>
+      </div>
+      <div class="subgroup hidden" id="sub-epi">
+        <label>Quais EPIs (toque em quantos quiser)</label>
+        <div class="choice-group" data-group="epiQuais" data-multi="true">
+          <div class="choice" data-val="Bota">Bota</div>
+          <div class="choice" data-val="Luvas">Luvas</div>
+          <div class="choice" data-val="Perneira">Perneira</div>
+          <div class="choice" data-val="Protetor solar">Protetor solar</div>
+          <div class="choice" data-val="Chapéu">Chapéu</div>
+          <div class="choice" data-val="Boné árabe">Boné árabe</div>
+          <div class="choice" data-val="Óculos de segurança">Óculos</div>
+          <div class="choice" data-val="Máscara">Máscara</div>
+          <div class="choice" data-val="Protetor auricular">Prot. auricular</div>
+          <div class="choice" data-val="Roupa de proteção">Roupa proteção</div>
+        </div>
+        <label>Outros EPIs (descreva)</label>
+        <input type="text" id="f-epiOutros" placeholder="Opcional">
+        <label>Pagou pelos EPIs?</label>
+        <div class="choice-group" data-group="epiPagou">
+          <div class="choice" data-val="Sim">Sim</div>
+          <div class="choice" data-val="Não">Não</div>
+        </div>
+        <label>Costuma utilizar o EPI fornecido?</label>
+        <div class="choice-group" data-group="epiUsa">
+          <div class="choice" data-val="Sim">Sim</div>
+          <div class="choice" data-val="Não">Não</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <p class="section-label">Acidente de trabalho</p>
+      <label>Já sofreu acidente de trabalho?</label>
+      <div class="choice-group" data-group="acidenteSofreu">
+        <div class="choice" data-val="Sim">Sim</div>
+        <div class="choice" data-val="Não">Não</div>
+      </div>
+      <div class="subgroup hidden" id="sub-acidente">
+        <label>Tipo de acidente</label>
+        <div class="choice-group" data-group="acidenteTipo">
+          <div class="choice" data-val="Típico">Típico</div>
+          <div class="choice" data-val="Trajeto">Trajeto</div>
+          <div class="choice" data-val="Doença ocupacional">Doença ocupacional</div>
+        </div>
+        <label>Descrição do acidente</label>
+        <input type="text" id="f-acidenteQual" placeholder="Descreva brevemente">
+        <label>Dias afastado</label>
+        <input type="text" id="f-acidenteDiasAfastado" inputmode="numeric" placeholder="Ex.: 20">
+        <label>Houve emissão de CAT?</label>
+        <div class="choice-group" data-group="acidenteCat">
+          <div class="choice" data-val="Sim">Sim</div>
+          <div class="choice" data-val="Não">Não</div>
+          <div class="choice" data-val="Não sabe">Não sabe</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <p class="section-label">Benefícios sociais</p>
+      <label>Recebe benefício do governo?</label>
+      <div class="choice-group" data-group="beneficioRecebe">
+        <div class="choice" data-val="Sim">Sim</div>
+        <div class="choice" data-val="Não">Não</div>
+      </div>
+      <div class="subgroup hidden" id="sub-beneficio">
+        <label>Qual?</label>
+        <input type="text" id="f-beneficioQual" placeholder="Ex.: Bolsa Família, BPC">
+      </div>
+      <div class="row2">
+        <div><label>Quantos filhos</label><input type="text" id="f-filhosQtd" inputmode="numeric" placeholder="Ex.: 2"></div>
+        <div><label>Refeições por dia</label><input type="text" id="f-refeicoesDia" inputmode="numeric" placeholder="Ex.: 3"></div>
+      </div>
+      <label>Na casa que mora tem banheiro?</label>
+      <div class="choice-group" data-group="casaBanheiro">
+        <div class="choice" data-val="Sim">Sim</div>
+        <div class="choice" data-val="Não">Não</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <p class="section-label">Relato livre</p>
+      <textarea id="f-relato" placeholder="Anote com as palavras do trabalhador..." style="min-height:110px;"></textarea>
+    </div>
+
+    <p class="legal-note">Entrevista realizada em caráter sigiloso nos termos do art. 18, § 2º, da Lei n.º 10.593/2002 e art. 9º, § 3º, do Decreto n.º 4.552/2002 (Regulamento da Inspeção do Trabalho).</p>
+    <p class="hint" style="text-align:center;">Rascunho salvo automaticamente enquanto você preenche.</p>
+  </div>
+
+  <div id="tab-list" style="display:none;">
+    <div class="search-bar"><input type="text" id="search" placeholder="Buscar por nome, empregador ou função..."></div>
+    <div id="entries-list"></div>
+  </div>
+
+  <div id="tab-resumo" style="display:none;">
+    <div id="resumo-content"></div>
+  </div>
+
+  <div id="tab-detail" style="display:none;">
+    <div class="top-actions">
+      <button class="icon-btn" id="back-to-list">‹ Voltar</button>
+      <div style="display:flex;gap:14px;">
+        <button class="icon-btn" id="pdf-entry">📄 PDF</button>
+        <button class="icon-btn" id="delete-entry" style="color:#c98b7c;">Excluir</button>
+      </div>
+    </div>
+    <div id="detail-content"></div>
+  </div>
+
+</main>
+
+<div class="actions-bar" id="bar-new">
+  <button class="ghost" id="save-form">Salvar</button>
+  <button class="primary secondary-fill" id="save-next">Salvar + próximo</button>
+</div>
+
+<div class="actions-bar" id="bar-list" style="display:none;">
+  <button class="ghost" id="export-csv">CSV</button>
+  <button class="ghost" id="export-pdf-all">📄 PDF</button>
+  <button class="ghost" id="backup-menu">Backup</button>
+  <button class="primary" id="new-from-list">+ Nova</button>
+</div>
+
+<div class="toast" id="toast"></div>
+<div id="print-area"></div>
+<input type="file" id="import-file" accept="application/json,.json" style="display:none;">
+
+<script>
+(function(){
+  var STORAGE_KEY = 'entrevistas_fiscalizacao_v4';
+  var DRAFT_KEY = 'entrevistas_fiscalizacao_draft_v4';
+  var LEGAL_NOTE = 'Entrevista realizada em caráter sigiloso nos termos do art. 18, § 2º, da Lei n.º 10.593/2002 e art. 9º, § 3º, do Decreto n.º 4.552/2002 (Regulamento da Inspeção do Trabalho).';
+
+  function loadEntries(){ try{ var raw = localStorage.getItem(STORAGE_KEY); return raw ? JSON.parse(raw) : []; }catch(e){ return []; } }
+  function saveEntries(list){ try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(list)); }catch(e){ toast('Erro ao salvar — espaço cheio?'); } }
+  var entries = loadEntries();
+
+  var tabButtons = document.querySelectorAll('nav.tabs button');
+  var tabs = { new: document.getElementById('tab-new'), list: document.getElementById('tab-list'), resumo: document.getElementById('tab-resumo'), detail: document.getElementById('tab-detail') };
+  var bars = { new: document.getElementById('bar-new'), list: document.getElementById('bar-list') };
+
+  function showTab(name){
+    Object.keys(tabs).forEach(function(k){ tabs[k].style.display = (k===name)?'block':'none'; });
+    bars.new.style.display = (name==='new') ? 'flex' : 'none';
+    bars.list.style.display = (name==='list') ? 'flex' : 'none';
+    tabButtons.forEach(function(b){ b.classList.toggle('active', b.dataset.tab===name || (name==='detail' && b.dataset.tab==='list')); });
+    if(name==='list') renderList();
+    if(name==='resumo') renderResumo();
+    window.scrollTo(0,0);
+  }
+  tabButtons.forEach(function(b){ b.addEventListener('click', function(){ showTab(b.dataset.tab); }); });
+
+  var CONDITIONALS = [
+    {group:'valeTransporte', showWhen:['Sim'], target:'sub-vt'},
+    {group:'valeAlimentacao', showWhen:['Sim'], target:'sub-va'},
+    {group:'desconta', showWhen:['Sim'], target:'sub-desconta'},
+    {group:'horasExtras', showWhen:['Sim'], target:'sub-he'},
+    {group:'epiRecebeu', showWhen:['Sim','Parcial'], target:'sub-epi'},
+    {group:'acidenteSofreu', showWhen:['Sim'], target:'sub-acidente'},
+    {group:'beneficioRecebe', showWhen:['Sim'], target:'sub-beneficio'}
+  ];
+  function applyConditional(groupName){
+    CONDITIONALS.filter(function(c){ return c.group===groupName; }).forEach(function(c){
+      var v = getGroupValue(c.group);
+      var el = document.getElementById(c.target);
+      if(el) el.classList.toggle('hidden', c.showWhen.indexOf(v) === -1);
+    });
+  }
+  function applyAllConditionals(){ CONDITIONALS.forEach(function(c){ applyConditional(c.group); }); }
+
+  document.querySelectorAll('.choice-group[data-group]').forEach(function(g){
+    g.addEventListener('click', function(e){
+      var chip = e.target.closest('.choice');
+      if(!chip) return;
+      if(g.dataset.multi === 'true'){
+        chip.classList.toggle('sel');
+      } else {
+        var already = chip.classList.contains('sel');
+        g.querySelectorAll('.choice').forEach(function(c){ c.classList.remove('sel'); });
+        if(!already) chip.classList.add('sel');
+      }
+      scheduleDraftSave();
+      applyConditional(g.dataset.group);
+    });
+  });
+
+  function getGroupValue(name){
+    var g = document.querySelector('.choice-group[data-group="'+name+'"]');
+    if(!g) return '';
+    if(g.dataset.multi === 'true'){
+      return Array.prototype.map.call(g.querySelectorAll('.choice.sel'), function(c){ return c.dataset.val; }).join(', ');
+    }
+    var sel = g.querySelector('.choice.sel');
+    return sel ? sel.dataset.val : '';
+  }
+  function setGroupValue(name, val){
+    var g = document.querySelector('.choice-group[data-group="'+name+'"]');
+    if(!g) return;
+    if(g.dataset.multi === 'true'){
+      var vals = (val||'').split(',').map(function(s){return s.trim();}).filter(Boolean);
+      g.querySelectorAll('.choice').forEach(function(c){ c.classList.toggle('sel', vals.indexOf(c.dataset.val)>-1); });
+      return;
+    }
+    g.querySelectorAll('.choice').forEach(function(c){ c.classList.toggle('sel', c.dataset.val===val); });
+  }
+
+  function todayISO(){ var d = new Date(); var tz = d.getTimezoneOffset()*60000; return new Date(d - tz).toISOString().slice(0,10); }
+  document.getElementById('f-data').value = todayISO();
+
+  function toast(msg){ var t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(function(){ t.classList.remove('show'); }, 2000); }
+
+  var TEXT_IDS = ['f-empregador','f-data','f-nome','f-cpf','f-nascimento','f-mae','f-naturalidade','f-funcao','f-inicio','f-salario','f-valeTransporteDetalhe','f-valeAlimentacaoDetalhe','f-descontaQuais','f-entrada','f-saidaIntervalo','f-retornoIntervalo','f-saida','f-jornadaExcecoes','f-folgas','f-ultimoTreinamento','f-ultimoExame','f-epiOutros','f-acidenteQual','f-acidenteDiasAfastado','f-beneficioQual','f-filhosQtd','f-refeicoesDia','f-relato'];
+  var GROUP_NAMES = ['genero','carteira','salarioUnidade','formaPagamento','periodicidade','atrasoSalario','decimoTerceiro','feriasEmDia','valeTransporte','valeAlimentacao','desconta','diasSemana','horasExtras','horasExtrasTipo','treinamentoAdmissional','treinamentoPeriodico','exameAdmissional','examePeriodico','epiRecebeu','epiQuais','epiPagou','epiUsa','acidenteSofreu','acidenteTipo','acidenteCat','beneficioRecebe','casaBanheiro'];
+  var LOCAL_TEXT_IDS = ['f-empregador','f-data'];
+  var PERSON_TEXT_IDS = TEXT_IDS.filter(function(id){ return LOCAL_TEXT_IDS.indexOf(id)===-1; });
+
+  function val(id){ var el = document.getElementById(id); return el ? el.value.trim() : ''; }
+
+  function clearPersonFields(){
+    PERSON_TEXT_IDS.forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
+    GROUP_NAMES.forEach(function(g){ setGroupValue(g,''); });
+    applyAllConditionals();
+    checkDuplicate();
+  }
+  function clearAllFields(){
+    TEXT_IDS.forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
+    document.getElementById('f-data').value = todayISO();
+    GROUP_NAMES.forEach(function(g){ setGroupValue(g,''); });
+    applyAllConditionals();
+    checkDuplicate();
+    clearDraft();
+  }
+  document.getElementById('btn-clear-all').addEventListener('click', function(){ if(confirm('Limpar todos os campos, inclusive o empregador?')) clearAllFields(); });
+  document.getElementById('btn-repeat-local').addEventListener('click', function(){
+    if(entries.length===0){ toast('Nenhum registro anterior ainda'); return; }
+    document.getElementById('f-empregador').value = entries[0].empregador || '';
+    toast('Empregador do último registro aplicado');
+    scheduleDraftSave();
+  });
+
+  function collectForm(){
+    var o = { id: Date.now().toString(36) + Math.random().toString(36).slice(2,6), criado: new Date().toISOString() };
+    TEXT_IDS.forEach(function(id){ o[id.slice(2)] = val(id); });
+    GROUP_NAMES.forEach(function(g){ o[g] = getGroupValue(g); });
+    return o;
+  }
+
+  function onlyDigits(s){ return (s||'').replace(/\D/g,''); }
+  function checkDuplicate(){
+    var warn = document.getElementById('dupe-warn');
+    var cpf = onlyDigits(val('f-cpf'));
+    if(cpf.length < 11){ warn.classList.remove('show'); return; }
+    var found = entries.filter(function(e){ return onlyDigits(e.cpf)===cpf; });
+    if(found.length){
+      warn.textContent = '⚠ Este CPF já foi entrevistado: ' + (found[0].nome||'sem nome') + ' — ' + (found[0].empregador||'sem empregador') + ' (' + fmtDate(found[0].data) + ')';
+      warn.classList.add('show');
+    } else {
+      warn.classList.remove('show');
+    }
+  }
+  document.getElementById('f-cpf').addEventListener('input', checkDuplicate);
+
+  function refreshEmpregadorList(){
+    var names = {};
+    entries.forEach(function(e){ if(e.empregador) names[e.empregador]=1; });
+    document.getElementById('empregadores-list').innerHTML = Object.keys(names).map(function(n){ return '<option value="'+escapeAttr(n)+'">'; }).join('');
+  }
+  function refreshFuncaoFreq(){
+    var counts = {};
+    entries.forEach(function(e){ if(e.funcao){ counts[e.funcao] = (counts[e.funcao]||0)+1; } });
+    var top = Object.keys(counts).sort(function(a,b){ return counts[b]-counts[a]; }).slice(0,6);
+    document.getElementById('funcao-freq').innerHTML = top.length ? top.map(function(f){ return '<div class="choice" data-quick-funcao="'+escapeAttr(f)+'">'+escapeHtml(f)+'</div>'; }).join('') : '';
+  }
+  document.getElementById('funcao-freq').addEventListener('click', function(e){
+    var chip = e.target.closest('[data-quick-funcao]');
+    if(!chip) return;
+    document.getElementById('f-funcao').value = chip.dataset.quickFuncao;
+    scheduleDraftSave();
+  });
+
+  function doSave(keepEmployer){
+    var data = collectForm();
+    if(!data.nome && !data.empregador){ toast('Informe ao menos o nome ou o empregador'); return false; }
+    entries.unshift(data);
+    saveEntries(entries);
+    refreshFuncaoFreq(); refreshEmpregadorList();
+    if(keepEmployer){
+      var emp = data.empregador, dt = data.data;
+      clearPersonFields();
+      document.getElementById('f-empregador').value = emp;
+      document.getElementById('f-data').value = dt;
+      clearDraft(); saveDraftNow();
+      toast('Ficha salva — pronto para o próximo trabalhador');
+      document.getElementById('f-nome').focus();
+    } else {
+      clearAllFields();
+      toast('Ficha salva');
+      showTab('list');
+    }
+    return true;
+  }
+  document.getElementById('save-form').addEventListener('click', function(){ doSave(false); });
+  document.getElementById('save-next').addEventListener('click', function(){ doSave(true); });
+  document.getElementById('new-from-list').addEventListener('click', function(){ showTab('new'); });
+
+  var draftTimer = null;
+  function scheduleDraftSave(){ clearTimeout(draftTimer); draftTimer = setTimeout(saveDraftNow, 400); }
+  function saveDraftNow(){
+    try{ localStorage.setItem(DRAFT_KEY, JSON.stringify(collectForm())); }catch(e){}
+    var ind = document.getElementById('draft-indicator');
+    ind.textContent = 'rascunho salvo';
+    setTimeout(function(){ ind.textContent=''; }, 1200);
+  }
+  function clearDraft(){ localStorage.removeItem(DRAFT_KEY); }
+  function restoreDraft(){
+    try{
+      var raw = localStorage.getItem(DRAFT_KEY);
+      if(!raw) return;
+      var d = JSON.parse(raw);
+      if(!(d.nome || d.empregador || d.relato || d.funcao)) return;
+      TEXT_IDS.forEach(function(id){ var k=id.slice(2); var el=document.getElementById(id); if(el && d[k]!==undefined) el.value = d[k]||''; });
+      GROUP_NAMES.forEach(function(g){ if(d[g]!==undefined) setGroupValue(g, d[g]); });
+      applyAllConditionals(); checkDuplicate();
+      toast('Rascunho anterior restaurado');
+    }catch(e){}
+  }
+  TEXT_IDS.forEach(function(id){ var el=document.getElementById(id); if(el) el.addEventListener('input', scheduleDraftSave); });
+
+  function fmtDate(iso){ if(!iso) return ''; var p=(iso||'').split('-'); return p.length===3 ? (p[2]+'/'+p[1]+'/'+p[0]) : iso; }
+  var MESES = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+  function fmtMonth(iso){
+    if(!iso) return '';
+    var p = iso.split('-');
+    if(p.length<2) return iso;
+    var m = parseInt(p[1],10);
+    return (MESES[m-1]||p[1]) + ' de ' + p[0];
+  }
+  function fmtSalario(e){
+    if(!e.salario) return '';
+    return 'R$ ' + e.salario + (e.salarioUnidade ? (' / ' + e.salarioUnidade.toLowerCase()) : '');
+  }
+
+  // irregularity flags
+  function flagsFor(e){
+    var f = [];
+    if(e.carteira==='Não') f.push('Sem registro');
+    if(e.atrasoSalario==='Sim') f.push('Atraso salário');
+    if(e.decimoTerceiro==='Não') f.push('Sem 13º');
+    if(e.feriasEmDia==='Não') f.push('Férias atrasadas');
+    if(e.epiRecebeu==='Não') f.push('Sem EPI');
+    if(e.epiRecebeu==='Parcial') f.push('EPI parcial');
+    if(e.epiPagou==='Sim') f.push('Pagou EPI');
+    if(e.exameAdmissional==='Não') f.push('Sem exame admiss.');
+    if(e.examePeriodico==='Não') f.push('Exame periód. atrasado');
+    if(e.treinamentoAdmissional==='Não') f.push('Sem treinamento');
+    if(e.desconta==='Sim') f.push('Descontos');
+    if(e.horasExtras==='Sim' && e.horasExtrasTipo==='Nem uma nem outra') f.push('HE não paga');
+    if(e.acidenteSofreu==='Sim' && e.acidenteCat==='Não') f.push('Acidente sem CAT');
+    return f;
+  }
+
+  function groupByEmployer(list){
+    var map = {};
+    list.forEach(function(e){
+      var k = e.empregador || '(sem empregador)';
+      (map[k] = map[k] || []).push(e);
+    });
+    return map;
+  }
+
+  var collapsed = {};
+  function renderList(){
+    var q = (document.getElementById('search').value || '').toLowerCase();
+    var wrap = document.getElementById('entries-list');
+    var filtered = entries.filter(function(e){
+      if(!q) return true;
+      return ((e.nome||'')+' '+(e.empregador||'')+' '+(e.funcao||'')).toLowerCase().indexOf(q) > -1;
+    });
+    if(filtered.length===0){ wrap.innerHTML = '<div class="empty"><div class="big">🗂️</div>Nenhum registro ainda.<br>Toque em "+ Nova" para começar.</div>'; return; }
+    var map = groupByEmployer(filtered);
+    wrap.innerHTML = Object.keys(map).sort().map(function(emp){
+      var list = map[emp];
+      var isCollapsed = collapsed[emp];
+      return '<div class="emp-group">'+
+        '<div class="emp-header" data-emp-toggle="'+escapeAttr(emp)+'">'+
+          '<span class="emp-name">'+escapeHtml(emp)+'</span>'+
+          '<span class="emp-count">'+list.length+(list.length===1?' trabalhador':' trabalhadores')+' '+(isCollapsed?'▸':'▾')+'</span>'+
+        '</div>'+
+        '<div class="emp-body'+(isCollapsed?' collapsed':'')+'">'+
+          '<div class="emp-actions">'+
+            '<button data-emp-pdf="'+escapeAttr(emp)+'">📄 PDF desta empresa</button>'+
+          '</div>'+
+          list.map(function(e){
+            var fl = flagsFor(e);
+            return '<div class="entry" data-id="'+e.id+'">'+
+              '<div class="entry-top"><span class="entry-name">'+escapeHtml(e.nome||'(sem nome)')+'</span>'+
+              '<span class="entry-date">'+fmtDate(e.data)+'</span></div>'+
+              '<div class="entry-meta">'+(e.funcao?escapeHtml(e.funcao):'função não informada')+'</div>'+
+              (fl.length?'<div class="flags">'+fl.map(function(x){ return '<span class="flag">'+escapeHtml(x)+'</span>'; }).join('')+'</div>':'')+
+            '</div>';
+          }).join('')+
+        '</div></div>';
+    }).join('');
+  }
+  document.getElementById('search').addEventListener('input', renderList);
+  document.getElementById('entries-list').addEventListener('click', function(e){
+    var toggle = e.target.closest('[data-emp-toggle]');
+    if(toggle){ var k = toggle.dataset.empToggle; collapsed[k] = !collapsed[k]; renderList(); return; }
+    var pdfBtn = e.target.closest('[data-emp-pdf]');
+    if(pdfBtn){
+      var emp = pdfBtn.dataset.empPdf;
+      printEntries(entries.filter(function(x){ return (x.empregador||'(sem empregador)')===emp; }));
+      return;
+    }
+    var card = e.target.closest('.entry');
+    if(card) openDetail(card.dataset.id);
+  });
+
+  function renderResumo(){
+    var wrap = document.getElementById('resumo-content');
+    if(entries.length===0){ wrap.innerHTML = '<div class="empty"><div class="big">📊</div>Nenhum registro para resumir.</div>'; return; }
+    var map = groupByEmployer(entries);
+    var CHECKS = [
+      ['Sem carteira registrada', function(e){ return e.carteira==='Não'; }],
+      ['Atraso de salário', function(e){ return e.atrasoSalario==='Sim'; }],
+      ['13º não pago', function(e){ return e.decimoTerceiro==='Não'; }],
+      ['Férias atrasadas', function(e){ return e.feriasEmDia==='Não'; }],
+      ['Sem vale-transporte', function(e){ return e.valeTransporte==='Não'; }],
+      ['Descontos no salário', function(e){ return e.desconta==='Sim'; }],
+      ['Horas extras não pagas', function(e){ return e.horasExtras==='Sim' && e.horasExtrasTipo==='Nem uma nem outra'; }],
+      ['Sem treinamento admissional', function(e){ return e.treinamentoAdmissional==='Não'; }],
+      ['Sem exame admissional', function(e){ return e.exameAdmissional==='Não'; }],
+      ['Exame periódico atrasado', function(e){ return e.examePeriodico==='Não'; }],
+      ['Sem EPI / EPI parcial', function(e){ return e.epiRecebeu==='Não' || e.epiRecebeu==='Parcial'; }],
+      ['Pagou pelos EPIs', function(e){ return e.epiPagou==='Sim'; }],
+      ['Acidente sem CAT', function(e){ return e.acidenteSofreu==='Sim' && e.acidenteCat==='Não'; }]
+    ];
+    wrap.innerHTML = Object.keys(map).sort().map(function(emp){
+      var list = map[emp];
+      var rows = CHECKS.map(function(c){
+        var n = list.filter(c[1]).length;
+        if(n===0) return '';
+        return '<div class="sum-row"><span>'+c[0]+'</span><span class="sum-val bad">'+n+' de '+list.length+'</span></div>';
+      }).filter(Boolean).join('');
+      return '<div class="card">'+
+        '<p class="section-label">'+escapeHtml(emp)+'</p>'+
+        '<div class="sum-row"><span>Trabalhadores entrevistados</span><span class="sum-val">'+list.length+'</span></div>'+
+        (rows || '<div class="sum-row"><span>Nenhum ponto de atenção registrado</span><span class="sum-val">—</span></div>')+
+      '</div>';
+    }).join('');
+  }
+
+  var currentDetailId = null;
+  function detailSections(e){
+    return [
+      {title:'Empregador e data', rows:[['Empregador', e.empregador],['Data da entrevista', fmtDate(e.data)]]},
+      {title:'Identificação do trabalhador', rows:[['Nome', e.nome],['CPF', e.cpf],['Nascimento', fmtDate(e.nascimento)],['Nome da mãe', e.mae],['Gênero', e.genero],['Onde nasceu', e.naturalidade]]},
+      {title:'Função e vínculo', rows:[['Função', e.funcao],['Começou a trabalhar', fmtMonth(e.inicio)],['Carteira registrada', e.carteira]]},
+      {title:'Remuneração', rows:[['Salário', fmtSalario(e)],['Forma de pagamento', e.formaPagamento],['Periodicidade', e.periodicidade],['Atraso de salário', e.atrasoSalario],['13º pago', e.decimoTerceiro],['Férias em dia', e.feriasEmDia],['Vale-transporte', e.valeTransporte],['VT valor/tipo', e.valeTransporteDetalhe],['Vale-alimentação', e.valeAlimentacao],['VA valor/tipo', e.valeAlimentacaoDetalhe],['Desconta valores', e.desconta],['Quais descontos', e.descontaQuais]]},
+      {title:'Jornada de trabalho', rows:[['Entrada', e.entrada],['Saída p/ intervalo', e.saidaIntervalo],['Retorno do intervalo', e.retornoIntervalo],['Saída', e.saida],['Dias trabalhados', e.diasSemana],['Horários diferentes', e.jornadaExcecoes],['Folgas', e.folgas],['Faz horas extras', e.horasExtras],['Compensadas/pagas', e.horasExtrasTipo]]},
+      {title:'Treinamento, exames e EPI', rows:[['Treinamento admissional', e.treinamentoAdmissional],['Treinamento periódico', e.treinamentoPeriodico],['Último treinamento', fmtMonth(e.ultimoTreinamento)],['Exame admissional', e.exameAdmissional],['Exame periódico em dia', e.examePeriodico],['Último exame', fmtMonth(e.ultimoExame)],['Recebeu EPI', e.epiRecebeu],['Quais EPIs', e.epiQuais],['Outros EPIs', e.epiOutros],['Pagou pelos EPIs', e.epiPagou],['Costuma usar', e.epiUsa]]},
+      {title:'Acidente de trabalho', rows:[['Já sofreu acidente', e.acidenteSofreu],['Tipo', e.acidenteTipo],['Descrição', e.acidenteQual],['Dias afastado', e.acidenteDiasAfastado],['Emissão de CAT', e.acidenteCat]]},
+      {title:'Benefícios sociais', rows:[['Recebe benefício', e.beneficioRecebe],['Qual benefício', e.beneficioQual],['Quantos filhos', e.filhosQtd],['Refeições por dia', e.refeicoesDia],['Casa tem banheiro', e.casaBanheiro]]}
+    ];
+  }
+  function openDetail(id){
+    var e = entries.find(function(x){ return x.id===id; });
+    if(!e) return;
+    currentDetailId = id;
+    var html = detailSections(e).map(function(sec){
+      var rowsHtml = sec.rows.filter(function(r){return r[1];}).map(function(r){
+        return '<div class="detail-field"><div class="detail-label">'+r[0]+'</div><div class="detail-value">'+escapeHtml(r[1])+'</div></div>';
+      }).join('');
+      return rowsHtml ? ('<div class="detail-section-title">'+sec.title+'</div>'+rowsHtml) : '';
+    }).join('');
+    if(e.relato) html += '<div class="detail-section-title">Relato livre</div><div class="detail-value">'+escapeHtml(e.relato).replace(/\n/g,'<br>')+'</div>';
+    document.getElementById('detail-content').innerHTML = '<div class="card">' + html + '</div>';
+    Object.keys(tabs).forEach(function(k){ tabs[k].style.display = (k==='detail')?'block':'none'; });
+    bars.new.style.display='none'; bars.list.style.display='none';
+    tabButtons.forEach(function(b){ b.classList.toggle('active', b.dataset.tab==='list'); });
+    window.scrollTo(0,0);
+  }
+  document.getElementById('back-to-list').addEventListener('click', function(){ showTab('list'); });
+  document.getElementById('delete-entry').addEventListener('click', function(){
+    if(!currentDetailId) return;
+    if(!confirm('Excluir esta ficha permanentemente?')) return;
+    entries = entries.filter(function(x){ return x.id!==currentDetailId; });
+    saveEntries(entries); refreshFuncaoFreq(); refreshEmpregadorList(); toast('Ficha excluída'); showTab('list');
+  });
+
+  function escapeHtml(s){ return (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function escapeAttr(s){ return (s||'').toString().replace(/&/g,'&amp;').replace(/"/g,'&quot;'); }
+
+  function downloadBlob(content, filename, mime){
+    var blob = new Blob([content], {type:mime});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a'); a.href=url; a.download=filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 500);
+  }
+
+  // ---- CSV ----
+  var CSV_COLS = [
+    ['Empregador','empregador'],['Data da entrevista','data'],['Nome','nome'],['CPF','cpf'],
+    ['Nascimento','nascimento'],['Nome da mãe','mae'],['Gênero','genero'],['Onde nasceu','naturalidade'],
+    ['Função','funcao'],['Começou a trabalhar','inicio'],['Carteira registrada','carteira'],
+    ['Salário','salario'],['Salário por','salarioUnidade'],['Forma de pagamento','formaPagamento'],['Periodicidade','periodicidade'],
+    ['Atraso de salário','atrasoSalario'],['13º pago','decimoTerceiro'],['Férias em dia','feriasEmDia'],
+    ['Vale-transporte','valeTransporte'],['VT valor/tipo','valeTransporteDetalhe'],
+    ['Vale-alimentação','valeAlimentacao'],['VA valor/tipo','valeAlimentacaoDetalhe'],
+    ['Desconta valores','desconta'],['Quais descontos','descontaQuais'],
+    ['Entrada','entrada'],['Saída p/ intervalo','saidaIntervalo'],['Retorno intervalo','retornoIntervalo'],['Saída','saida'],
+    ['Dias trabalhados','diasSemana'],['Horários diferentes','jornadaExcecoes'],['Folgas','folgas'],
+    ['Faz horas extras','horasExtras'],['HE compensadas/pagas','horasExtrasTipo'],
+    ['Treinamento admissional','treinamentoAdmissional'],['Treinamento periódico','treinamentoPeriodico'],['Último treinamento','ultimoTreinamento'],
+    ['Exame admissional','exameAdmissional'],['Exame periódico em dia','examePeriodico'],['Último exame','ultimoExame'],
+    ['Recebeu EPI','epiRecebeu'],['Quais EPIs','epiQuais'],['Outros EPIs','epiOutros'],['Pagou pelos EPIs','epiPagou'],['Costuma usar EPI','epiUsa'],
+    ['Sofreu acidente','acidenteSofreu'],['Tipo de acidente','acidenteTipo'],['Descrição do acidente','acidenteQual'],['Dias afastado','acidenteDiasAfastado'],['Emissão de CAT','acidenteCat'],
+    ['Recebe benefício','beneficioRecebe'],['Qual benefício','beneficioQual'],['Quantos filhos','filhosQtd'],['Refeições por dia','refeicoesDia'],['Casa tem banheiro','casaBanheiro'],
+    ['Relato livre','relato']
+  ];
+  function csvCell(v){
+    v = (v==null?'':String(v));
+    return '"' + v.replace(/"/g,'""').replace(/\r?\n/g,' ') + '"';
+  }
+  document.getElementById('export-csv').addEventListener('click', function(){
+    if(entries.length===0){ toast('Nenhum registro para exportar'); return; }
+    var sorted = entries.slice().sort(function(a,b){ return (a.empregador||'').localeCompare(b.empregador||''); });
+    var head = CSV_COLS.map(function(c){ return csvCell(c[0]); }).join(';');
+    var rows = sorted.map(function(e){ return CSV_COLS.map(function(c){ return csvCell(e[c[1]]); }).join(';'); });
+    var csv = '\uFEFF' + [head].concat(rows).join('\r\n');
+    downloadBlob(csv, 'entrevistas_'+todayISO()+'.csv', 'text/csv;charset=utf-8');
+    toast('CSV gerado — abre no Excel');
+  });
+
+  // ---- PDF (print), grouped by employer ----
+  function buildPrintEntry(e, idx, total){
+    var sectionsHtml = detailSections(e).map(function(sec){
+      var rowsHtml = sec.rows.filter(function(r){return r[1];}).map(function(r){
+        return '<div class="p-row"><div class="p-label">'+r[0]+'</div><div class="p-value">'+escapeHtml(r[1])+'</div></div>';
+      }).join('');
+      return rowsHtml ? ('<div class="p-section">'+sec.title+'</div>'+rowsHtml) : '';
+    }).join('');
+    var blocks = '';
+    if(e.relato) blocks += '<div class="p-block"><div class="p-label">Relato livre do trabalhador</div><div class="p-value">'+escapeHtml(e.relato).replace(/\n/g,'<br>')+'</div></div>';
+    return '<div class="p-entry">'+
+      '<div class="p-title">Ficha de Entrevista com Trabalhador'+(total>1?(' — '+(idx+1)+' de '+total):'')+'</div>'+
+      '<div class="p-sub">Gerado em '+new Date().toLocaleString('pt-BR')+'</div>'+
+      sectionsHtml + blocks +
+      '<div class="p-legal">'+LEGAL_NOTE+'</div>'+
+    '</div>';
+  }
+  function printEntries(list){
+    if(!list || list.length===0){ toast('Nenhum registro para exportar'); return; }
+    var map = groupByEmployer(list);
+    var html = Object.keys(map).sort().map(function(emp){
+      var group = map[emp];
+      var header = (list.length > group.length) ? ('<div class="p-emp-title">'+escapeHtml(emp)+' — '+group.length+(group.length===1?' trabalhador':' trabalhadores')+'</div>') : '';
+      return header + group.map(function(e,i){ return buildPrintEntry(e, i, group.length); }).join('');
+    }).join('');
+    document.getElementById('print-area').innerHTML = html;
+    setTimeout(function(){ window.print(); }, 80);
+  }
+  document.getElementById('pdf-entry').addEventListener('click', function(){
+    var e = entries.find(function(x){ return x.id===currentDetailId; });
+    if(e) printEntries([e]);
+  });
+  document.getElementById('export-pdf-all').addEventListener('click', function(){ printEntries(entries); });
+
+  // ---- Backup / restore ----
+  document.getElementById('backup-menu').addEventListener('click', function(){
+    var choice = prompt('Digite:\n1 = Exportar backup (arquivo .json)\n2 = Importar backup');
+    if(choice==='1'){
+      if(entries.length===0){ toast('Nenhum registro para exportar'); return; }
+      downloadBlob(JSON.stringify({versao:4, exportadoEm:new Date().toISOString(), fichas:entries}, null, 2), 'backup_entrevistas_'+todayISO()+'.json', 'application/json');
+      toast('Backup gerado — guarde este arquivo');
+    } else if(choice==='2'){
+      document.getElementById('import-file').click();
+    }
+  });
+  document.getElementById('import-file').addEventListener('change', function(ev){
+    var file = ev.target.files && ev.target.files[0];
+    if(!file) return;
+    var reader = new FileReader();
+    reader.onload = function(){
+      try{
+        var parsed = JSON.parse(reader.result);
+        var incoming = Array.isArray(parsed) ? parsed : parsed.fichas;
+        if(!Array.isArray(incoming)) throw new Error('formato');
+        var existingIds = {};
+        entries.forEach(function(e){ existingIds[e.id]=1; });
+        var added = 0;
+        incoming.forEach(function(e){ if(e && e.id && !existingIds[e.id]){ entries.push(e); added++; } });
+        entries.sort(function(a,b){ return (b.criado||'').localeCompare(a.criado||''); });
+        saveEntries(entries); refreshFuncaoFreq(); refreshEmpregadorList(); renderList();
+        toast(added ? (added+' ficha(s) importada(s)') : 'Nenhuma ficha nova no arquivo');
+      }catch(err){ toast('Arquivo de backup inválido'); }
+      ev.target.value = '';
+    };
+    reader.readAsText(file);
+  });
+
+  refreshFuncaoFreq();
+  refreshEmpregadorList();
+  restoreDraft();
+  applyAllConditionals();
+  renderList();
+})();
+</script>
+
+<script>
+if('serviceWorker' in navigator){
+  window.addEventListener('load', function(){
+    navigator.serviceWorker.register('sw.js').catch(function(){});
+  });
+}
+</script>
+</body>
+</html>
