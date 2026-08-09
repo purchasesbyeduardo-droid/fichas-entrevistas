@@ -120,7 +120,23 @@
   .flag{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;padding:2px 6px;border-radius:4px;background:var(--alert-bg);color:var(--alert);}
   .empty{text-align:center;padding:50px 20px;color:var(--ink-soft);}
   .empty .big{font-size:34px;margin-bottom:8px;}
-  .search-bar{margin-bottom:12px;}
+  .search-bar{margin-bottom:10px;}
+  .filter-row{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;margin-bottom:10px;}
+  .filter-chip{flex:0 0 auto;border:1px solid var(--line);background:#fff;color:var(--ink-soft);font-size:12.5px;font-weight:600;padding:8px 12px;border-radius:16px;cursor:pointer;white-space:nowrap;}
+  .filter-chip.sel{background:var(--alert);border-color:var(--alert);color:#fff;}
+  .filter-chip.sel[data-f="__all__"]{background:var(--navy);border-color:var(--navy);}
+  .edit-banner{background:#eee7d3;border:1px solid #ddd0a5;color:var(--gold-2);font-size:13px;font-weight:700;padding:10px 12px;border-radius:8px;margin-bottom:10px;}
+  .gps-row{display:flex;gap:8px;align-items:stretch;}
+  .gps-row input{flex:1;background:#f7f6f1;}
+  .gps-row button{flex:0 0 auto;background:var(--navy);color:#fff;border:none;border-radius:7px;padding:0 15px;font-size:15px;font-weight:700;cursor:pointer;}
+  .sugestoes{margin-top:7px;display:none;}
+  .sugestoes-label{font-size:11px;font-weight:600;color:var(--ink-soft);opacity:.8;margin-bottom:5px;letter-spacing:.02em;}
+  .sugestoes-pills{display:flex;flex-wrap:wrap;gap:5px;}
+  .pill{border:1px dashed var(--line);background:#f7f6f1;color:var(--ink-soft);font-size:12.5px;font-weight:600;padding:6px 11px;border-radius:14px;cursor:pointer;white-space:nowrap;transition:transform .06s;}
+  .pill:active{transform:scale(.95);}
+  body.sol .pill{border-style:solid;background:#fff;}
+  .resumo-actions{margin-bottom:10px;}
+  .resumo-actions button{width:100%;background:#eee7d3;border:1px solid #ddd0a5;color:var(--gold-2);font-weight:700;font-size:13.5px;padding:12px;border-radius:8px;cursor:pointer;}
   .toast{position:fixed;top:14px;left:50%;transform:translateX(-50%);background:var(--navy);color:#fff;padding:11px 18px;border-radius:20px;font-size:14px;font-weight:600;z-index:100;opacity:0;pointer-events:none;transition:opacity .25s, top .25s;max-width:85vw;text-align:center;}
   .toast.show{opacity:1;top:70px;}
   .detail-field{margin-bottom:11px;}
@@ -181,7 +197,8 @@
 <main>
 
   <div id="tab-new">
-    <div class="quickbar">
+    <div class="edit-banner" id="edit-banner" style="display:none;"></div>
+    <div class="quickbar" id="quickbar">
       <button id="btn-repeat-local">↺ Repetir empregador</button>
       <button id="btn-clear-all">Limpar tudo</button>
     </div>
@@ -193,6 +210,12 @@
       <datalist id="empregadores-list"></datalist>
       <label>Data da entrevista</label>
       <input type="date" id="f-data">
+      <label>Coordenadas do local</label>
+      <div class="gps-row">
+        <input type="text" id="f-gps" placeholder="Não registradas" readonly>
+        <button type="button" id="btn-gps">📍</button>
+      </div>
+      <p class="hint" id="gps-hint">Toque em 📍 para gravar onde a entrevista foi feita. Funciona sem internet.</p>
     </div>
 
     <div class="card" data-card="1">
@@ -222,7 +245,10 @@
       <p class="section-label">Função e vínculo</p>
       <label>Função</label>
       <input type="text" id="f-funcao" placeholder="Toque em uma opção ou digite">
-      <div class="choice-group" id="funcao-freq"></div>
+      <div class="sugestoes" id="funcao-sug">
+        <div class="sugestoes-label" id="funcao-sug-label"></div>
+        <div class="sugestoes-pills" id="funcao-freq"></div>
+      </div>
       <label>Quando começou a trabalhar (mês/ano)</label>
       <input type="month" id="f-inicio">
       <label>Carteira de trabalho registrada?</label>
@@ -465,10 +491,12 @@
 
   <div id="tab-list" style="display:none;">
     <div class="search-bar"><input type="text" id="search" placeholder="Buscar por nome, empregador ou função..."></div>
+    <div class="filter-row" id="filter-row"></div>
     <div id="entries-list"></div>
   </div>
 
   <div id="tab-resumo" style="display:none;">
+    <div class="resumo-actions"><button id="export-resumo-pdf">📄 Exportar resumo em PDF</button></div>
     <div id="resumo-content"></div>
   </div>
 
@@ -476,6 +504,7 @@
     <div class="top-actions">
       <button class="icon-btn" id="back-to-list">‹ Voltar</button>
       <div style="display:flex;gap:14px;">
+        <button class="icon-btn" id="edit-entry">✎ Editar</button>
         <button class="icon-btn" id="pdf-entry">📄 PDF</button>
         <button class="icon-btn" id="delete-entry" style="color:#c98b7c;">Excluir</button>
       </div>
@@ -488,6 +517,11 @@
 <div class="actions-bar" id="bar-new">
   <button class="ghost" id="save-form">Salvar</button>
   <button class="primary secondary-fill" id="save-next">Salvar + próximo</button>
+</div>
+
+<div class="actions-bar" id="bar-edit" style="display:none;">
+  <button class="ghost" id="cancel-edit">Cancelar</button>
+  <button class="primary" id="save-edit">Salvar alterações</button>
 </div>
 
 <div class="actions-bar" id="bar-list" style="display:none;">
@@ -535,11 +569,14 @@
   /* ---------- abas ---------- */
   var tabButtons = document.querySelectorAll('nav.tabs button');
   var tabs = { new: document.getElementById('tab-new'), list: document.getElementById('tab-list'), resumo: document.getElementById('tab-resumo'), detail: document.getElementById('tab-detail') };
-  var bars = { new: document.getElementById('bar-new'), list: document.getElementById('bar-list') };
+  var bars = { new: document.getElementById('bar-new'), list: document.getElementById('bar-list'), edit: document.getElementById('bar-edit') };
+  var editingId = null;
+  var stashedDraft = null;
 
   function showTab(name){
     Object.keys(tabs).forEach(function(k){ tabs[k].style.display = (k===name)?'block':'none'; });
-    bars.new.style.display = (name==='new') ? 'flex' : 'none';
+    bars.new.style.display = (name==='new' && !editingId) ? 'flex' : 'none';
+    bars.edit.style.display = (name==='new' && editingId) ? 'flex' : 'none';
     bars.list.style.display = (name==='list') ? 'flex' : 'none';
     tabButtons.forEach(function(b){ b.classList.toggle('active', b.dataset.tab===name || (name==='detail' && b.dataset.tab==='list')); });
     if(name==='list') renderList();
@@ -708,9 +745,9 @@
   nascEl.addEventListener('change', refreshIdade);
 
   /* ---------- campos ---------- */
-  var TEXT_IDS = ['f-empregador','f-data','f-nome','f-cpf','f-nascimento','f-mae','f-naturalidade','f-funcao','f-inicio','f-salario','f-producaoMetrica','f-valeTransporteDetalhe','f-valeAlimentacaoDetalhe','f-descontaQuais','f-entrada','f-saidaIntervalo','f-retornoIntervalo','f-saida','f-jornadaExcecoes','f-folgas','f-ultimoTreinamento','f-ultimoExame','f-epiOutros','f-acidenteQual','f-acidenteDiasAfastado','f-beneficioQual','f-filhosQtd','f-refeicoesDia','f-relato'];
+  var TEXT_IDS = ['f-empregador','f-data','f-gps','f-nome','f-cpf','f-nascimento','f-mae','f-naturalidade','f-funcao','f-inicio','f-salario','f-producaoMetrica','f-valeTransporteDetalhe','f-valeAlimentacaoDetalhe','f-descontaQuais','f-entrada','f-saidaIntervalo','f-retornoIntervalo','f-saida','f-jornadaExcecoes','f-folgas','f-ultimoTreinamento','f-ultimoExame','f-epiOutros','f-acidenteQual','f-acidenteDiasAfastado','f-beneficioQual','f-filhosQtd','f-refeicoesDia','f-relato'];
   var GROUP_NAMES = ['genero','carteira','salarioUnidade','formaPagamento','periodicidade','atrasoSalario','decimoTerceiro','feriasEmDia','valeTransporte','valeAlimentacao','desconta','diasSemana','horasExtras','horasExtrasTipo','treinamentoAdmissional','treinamentoPeriodico','exameAdmissional','examePeriodico','epiRecebeu','epiQuais','epiPagou','epiUsa','acidenteSofreu','acidenteTipo','acidenteCat','beneficioRecebe','casaBanheiro'];
-  var LOCAL_TEXT_IDS = ['f-empregador','f-data'];
+  var LOCAL_TEXT_IDS = ['f-empregador','f-data','f-gps'];
   var PERSON_TEXT_IDS = TEXT_IDS.filter(function(id){ return LOCAL_TEXT_IDS.indexOf(id)===-1; });
 
   function val(id){ var el = document.getElementById(id); return el ? el.value.trim() : ''; }
@@ -746,7 +783,7 @@
     GROUP_NAMES.forEach(function(g){ setGroupValue(g,''); });
     applyAllConditionals(); checkDuplicate(); refreshIdade();
     document.getElementById('cpf-note').style.display='none';
-    refreshUI();
+    syncGpsHint(); refreshUI();
   }
   function clearAllFields(){
     TEXT_IDS.forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
@@ -754,14 +791,38 @@
     GROUP_NAMES.forEach(function(g){ setGroupValue(g,''); });
     applyAllConditionals(); checkDuplicate(); refreshIdade();
     document.getElementById('cpf-note').style.display='none';
-    clearDraft(); refreshUI();
+    syncGpsHint(); clearDraft(); refreshUI();
   }
   document.getElementById('btn-clear-all').addEventListener('click', function(){ if(confirm('Limpar todos os campos, inclusive o empregador?')) clearAllFields(); });
   document.getElementById('btn-repeat-local').addEventListener('click', function(){
     if(entries.length===0){ toast('Nenhum registro anterior ainda'); return; }
     document.getElementById('f-empregador').value = entries[0].empregador || '';
     toast('Empregador do último registro aplicado');
-    scheduleDraftSave(); refreshUI();
+    scheduleDraftSave(); refreshFuncaoFreq(); refreshUI();
+  });
+
+  /* ---------- GPS ---------- */
+  var GPS_HINT_PADRAO = 'Toque em 📍 para gravar onde a entrevista foi feita. Funciona sem internet.';
+  function syncGpsHint(){
+    var hint = document.getElementById('gps-hint');
+    hint.textContent = document.getElementById('f-gps').value
+      ? 'Coordenadas gravadas. Toque em 📍 de novo para atualizar.'
+      : GPS_HINT_PADRAO;
+  }
+  document.getElementById('btn-gps').addEventListener('click', function(){
+    var hint = document.getElementById('gps-hint');
+    if(!navigator.geolocation){ toast('Este aparelho não informa localização'); return; }
+    hint.textContent = 'Obtendo posição...';
+    navigator.geolocation.getCurrentPosition(function(pos){
+      var la = pos.coords.latitude.toFixed(6), lo = pos.coords.longitude.toFixed(6);
+      var ac = pos.coords.accuracy ? (' (±'+Math.round(pos.coords.accuracy)+' m)') : '';
+      document.getElementById('f-gps').value = la + ', ' + lo + ac;
+      hint.textContent = 'Coordenadas gravadas. Toque em 📍 de novo para atualizar.';
+      scheduleDraftSave(); refreshUI(); toast('Local registrado');
+    }, function(err){
+      hint.textContent = 'Não foi possível obter a posição. Verifique a permissão de localização.';
+      toast('Falha ao obter localização');
+    }, {enableHighAccuracy:true, timeout:15000, maximumAge:0});
   });
 
   function collectForm(){
@@ -788,10 +849,21 @@
     document.getElementById('empregadores-list').innerHTML = Object.keys(names).map(function(n){ return '<option value="'+escapeAttr(n)+'">'; }).join('');
   }
   function refreshFuncaoFreq(){
+    var box = document.getElementById('funcao-sug');
+    var emp = (val('f-empregador') || '').toLowerCase();
+    if(!emp){ box.style.display = 'none'; return; }
     var counts = {};
-    entries.forEach(function(e){ if(e.funcao){ counts[e.funcao] = (counts[e.funcao]||0)+1; } });
+    entries.forEach(function(e){
+      if((e.empregador||'').toLowerCase() !== emp) return;
+      if(e.funcao) counts[e.funcao] = (counts[e.funcao]||0)+1;
+    });
     var top = Object.keys(counts).sort(function(a,b){ return counts[b]-counts[a]; }).slice(0,6);
-    document.getElementById('funcao-freq').innerHTML = top.length ? top.map(function(f){ return '<div class="choice" data-quick-funcao="'+escapeAttr(f)+'">'+escapeHtml(f)+'</div>'; }).join('') : '';
+    if(!top.length){ box.style.display = 'none'; return; }
+    document.getElementById('funcao-sug-label').textContent = 'Já usadas neste empregador:';
+    document.getElementById('funcao-freq').innerHTML = top.map(function(f){
+      return '<span class="pill" data-quick-funcao="'+escapeAttr(f)+'">'+escapeHtml(f)+'</span>';
+    }).join('');
+    box.style.display = 'block';
   }
   document.getElementById('funcao-freq').addEventListener('click', function(e){
     var chip = e.target.closest('[data-quick-funcao]');
@@ -852,6 +924,8 @@
     var el=document.getElementById(id);
     if(el) el.addEventListener('input', function(){ scheduleDraftSave(); refreshUI(); });
   });
+  document.getElementById('f-empregador').addEventListener('input', refreshFuncaoFreq);
+  document.getElementById('f-empregador').addEventListener('change', refreshFuncaoFreq);
 
   /* ---------- formatadores ---------- */
   function fmtDate(iso){ if(!iso) return ''; var p=(iso||'').split('-'); return p.length===3 ? (p[2]+'/'+p[1]+'/'+p[0]) : iso; }
@@ -861,6 +935,12 @@
     var p = iso.split('-'); if(p.length<2) return iso;
     var m = parseInt(p[1],10);
     return (MESES[m-1]||p[1]) + ' de ' + p[0];
+  }
+  function fmtDateTime(iso){
+    if(!iso) return '';
+    var d = new Date(iso);
+    if(isNaN(d.getTime())) return '';
+    return d.toLocaleString('pt-BR', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
   }
   function fmtSalario(e){
     if(!e.salario) return '';
@@ -872,6 +952,23 @@
   }
 
   /* ---------- irregularidades ---------- */
+  var CHECKS = [
+    ['Menores de 18 anos', function(e){ var i=calcIdade(e.nascimento); return i!==null && i<18; }],
+    ['Sem carteira registrada', function(e){ return e.carteira==='Não'; }],
+    ['Atraso de salário', function(e){ return e.atrasoSalario==='Sim'; }],
+    ['13º não pago', function(e){ return e.decimoTerceiro==='Não'; }],
+    ['Férias atrasadas', function(e){ return e.feriasEmDia==='Não'; }],
+    ['Sem vale-transporte', function(e){ return e.valeTransporte==='Não'; }],
+    ['Descontos no salário', function(e){ return e.desconta==='Sim'; }],
+    ['Horas extras não pagas', function(e){ return e.horasExtras==='Sim' && e.horasExtrasTipo==='Nem uma nem outra'; }],
+    ['Sem treinamento admissional', function(e){ return e.treinamentoAdmissional==='Não'; }],
+    ['Sem exame admissional', function(e){ return e.exameAdmissional==='Não'; }],
+    ['Exame periódico atrasado', function(e){ return e.examePeriodico==='Não'; }],
+    ['Sem EPI / EPI parcial', function(e){ return e.epiRecebeu==='Não' || e.epiRecebeu==='Parcial'; }],
+    ['Pagou pelos EPIs', function(e){ return e.epiPagou==='Sim'; }],
+    ['Acidente sem CAT', function(e){ return e.acidenteSofreu==='Sim' && e.acidenteCat==='Não'; }]
+  ];
+
   function flagsFor(e){
     var f = [];
     if(calcIdade(e.nascimento) !== null && calcIdade(e.nascimento) < 18) f.push('Menor de idade');
@@ -898,14 +995,45 @@
   }
 
   var collapsed = {};
+  var activeFilter = '__all__';
+
+  function renderFilterRow(){
+    var row = document.getElementById('filter-row');
+    var chips = ['<div class="filter-chip'+(activeFilter==='__all__'?' sel':'')+'" data-f="__all__">Todos ('+entries.length+')</div>'];
+    CHECKS.forEach(function(c){
+      var n = entries.filter(c[1]).length;
+      if(n===0) return;
+      chips.push('<div class="filter-chip'+(activeFilter===c[0]?' sel':'')+'" data-f="'+escapeAttr(c[0])+'">'+escapeHtml(c[0])+' ('+n+')</div>');
+    });
+    row.innerHTML = chips.join('');
+  }
+  document.getElementById('filter-row').addEventListener('click', function(e){
+    var chip = e.target.closest('.filter-chip');
+    if(!chip) return;
+    activeFilter = chip.dataset.f;
+    renderList();
+  });
+
   function renderList(){
     var q = (document.getElementById('search').value || '').toLowerCase();
     var wrap = document.getElementById('entries-list');
+    renderFilterRow();
+    var check = null;
+    if(activeFilter !== '__all__'){
+      var found = CHECKS.filter(function(c){ return c[0]===activeFilter; })[0];
+      if(found) check = found[1]; else activeFilter = '__all__';
+    }
     var filtered = entries.filter(function(e){
+      if(check && !check(e)) return false;
       if(!q) return true;
       return ((e.nome||'')+' '+(e.empregador||'')+' '+(e.funcao||'')).toLowerCase().indexOf(q) > -1;
     });
-    if(filtered.length===0){ wrap.innerHTML = '<div class="empty"><div class="big">🗂️</div>Nenhum registro ainda.<br>Toque em "+ Nova" para começar.</div>'; return; }
+    if(filtered.length===0){
+      wrap.innerHTML = entries.length
+        ? '<div class="empty"><div class="big">🔎</div>Nenhuma ficha corresponde a esse filtro.</div>'
+        : '<div class="empty"><div class="big">🗂️</div>Nenhum registro ainda.<br>Toque em "+ Nova" para começar.</div>';
+      return;
+    }
     var map = groupByEmployer(filtered);
     wrap.innerHTML = Object.keys(map).sort().map(function(emp){
       var list = map[emp];
@@ -943,22 +1071,6 @@
     var wrap = document.getElementById('resumo-content');
     if(entries.length===0){ wrap.innerHTML = '<div class="empty"><div class="big">📊</div>Nenhum registro para resumir.</div>'; return; }
     var map = groupByEmployer(entries);
-    var CHECKS = [
-      ['Menores de 18 anos', function(e){ var i=calcIdade(e.nascimento); return i!==null && i<18; }],
-      ['Sem carteira registrada', function(e){ return e.carteira==='Não'; }],
-      ['Atraso de salário', function(e){ return e.atrasoSalario==='Sim'; }],
-      ['13º não pago', function(e){ return e.decimoTerceiro==='Não'; }],
-      ['Férias atrasadas', function(e){ return e.feriasEmDia==='Não'; }],
-      ['Sem vale-transporte', function(e){ return e.valeTransporte==='Não'; }],
-      ['Descontos no salário', function(e){ return e.desconta==='Sim'; }],
-      ['Horas extras não pagas', function(e){ return e.horasExtras==='Sim' && e.horasExtrasTipo==='Nem uma nem outra'; }],
-      ['Sem treinamento admissional', function(e){ return e.treinamentoAdmissional==='Não'; }],
-      ['Sem exame admissional', function(e){ return e.exameAdmissional==='Não'; }],
-      ['Exame periódico atrasado', function(e){ return e.examePeriodico==='Não'; }],
-      ['Sem EPI / EPI parcial', function(e){ return e.epiRecebeu==='Não' || e.epiRecebeu==='Parcial'; }],
-      ['Pagou pelos EPIs', function(e){ return e.epiPagou==='Sim'; }],
-      ['Acidente sem CAT', function(e){ return e.acidenteSofreu==='Sim' && e.acidenteCat==='Não'; }]
-    ];
     wrap.innerHTML = Object.keys(map).sort().map(function(emp){
       var list = map[emp];
       var rows = CHECKS.map(function(c){
@@ -978,7 +1090,7 @@
   var currentDetailId = null;
   function detailSections(e){
     return [
-      {title:'Empregador e data', rows:[['Empregador', e.empregador],['Data da entrevista', fmtDate(e.data)]]},
+      {title:'Empregador e data', rows:[['Empregador', e.empregador],['Data da entrevista', fmtDate(e.data)],['Coordenadas do local', e.gps],['Editada em', fmtDateTime(e.editadoEm)]]},
       {title:'Identificação', rows:[['Nome', e.nome],['CPF', e.cpf],['Nascimento', fmtDate(e.nascimento)],['Idade', idadeDe(e)],['Nome da mãe', e.mae],['Gênero', e.genero],['Onde nasceu', e.naturalidade]]},
       {title:'Função e vínculo', rows:[['Função', e.funcao],['Começou a trabalhar', fmtMonth(e.inicio)],['Carteira registrada', e.carteira]]},
       {title:'Remuneração', rows:[['Salário', fmtSalario(e)],['Métrica de produção', e.producaoMetrica],['Forma de pagamento', e.formaPagamento],['Periodicidade', e.periodicidade],['Atraso de salário', e.atrasoSalario],['13º pago', e.decimoTerceiro],['Férias em dia', e.feriasEmDia],['Vale-transporte', e.valeTransporte],['VT valor/tipo', e.valeTransporteDetalhe],['Vale-alimentação', e.valeAlimentacao],['VA valor/tipo', e.valeAlimentacaoDetalhe],['Desconta valores', e.desconta],['Quais descontos', e.descontaQuais]]},
@@ -1013,6 +1125,65 @@
     saveEntries(entries); refreshFuncaoFreq(); refreshEmpregadorList(); toast('Ficha excluída'); showTab('list');
   });
 
+  /* ---------- edicao de ficha ---------- */
+  function fillForm(e){
+    TEXT_IDS.forEach(function(id){
+      var el = document.getElementById(id);
+      if(el) el.value = e[id.slice(2)] || '';
+    });
+    GROUP_NAMES.forEach(function(g){ setGroupValue(g, e[g] || ''); });
+    applyAllConditionals(); refreshIdade(); syncGpsHint(); refreshUI();
+    document.getElementById('dupe-warn').classList.remove('show');
+    document.getElementById('cpf-note').style.display = 'none';
+  }
+
+  function enterEditMode(id){
+    var e = entries.find(function(x){ return x.id===id; });
+    if(!e) return;
+    stashedDraft = collectForm();
+    editingId = id;
+    fillForm(e);
+    var banner = document.getElementById('edit-banner');
+    banner.textContent = '✎ Editando a ficha de ' + (e.nome || 'trabalhador sem nome') + (e.empregador ? (' — ' + e.empregador) : '');
+    banner.style.display = 'block';
+    document.getElementById('quickbar').style.display = 'none';
+    showTab('new');
+  }
+
+  function exitEditMode(){
+    editingId = null;
+    document.getElementById('edit-banner').style.display = 'none';
+    document.getElementById('quickbar').style.display = 'flex';
+    if(stashedDraft){ fillForm(stashedDraft); stashedDraft = null; }
+    else clearAllFields();
+  }
+
+  document.getElementById('edit-entry').addEventListener('click', function(){
+    if(currentDetailId) enterEditMode(currentDetailId);
+  });
+  document.getElementById('cancel-edit').addEventListener('click', function(){
+    if(!confirm('Descartar as alterações desta ficha?')) return;
+    var id = editingId;
+    exitEditMode();
+    if(id) openDetail(id); else showTab('list');
+  });
+  document.getElementById('save-edit').addEventListener('click', function(){
+    if(!editingId) return;
+    var idx = entries.findIndex(function(x){ return x.id===editingId; });
+    if(idx === -1){ toast('Ficha não encontrada'); exitEditMode(); return; }
+    var updated = collectForm();
+    updated.id = entries[idx].id;
+    updated.criado = entries[idx].criado;
+    updated.editadoEm = new Date().toISOString();
+    entries[idx] = updated;
+    saveEntries(entries);
+    refreshFuncaoFreq(); refreshEmpregadorList();
+    var id = editingId;
+    exitEditMode();
+    toast('Alterações salvas');
+    openDetail(id);
+  });
+
   function escapeHtml(s){ return (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
   function escapeAttr(s){ return (s||'').toString().replace(/&/g,'&amp;').replace(/"/g,'&quot;'); }
 
@@ -1043,7 +1214,7 @@
     ['Recebeu EPI','epiRecebeu'],['Quais EPIs','epiQuais'],['Outros EPIs','epiOutros'],['Pagou pelos EPIs','epiPagou'],['Costuma usar EPI','epiUsa'],
     ['Sofreu acidente','acidenteSofreu'],['Tipo de acidente','acidenteTipo'],['Descrição do acidente','acidenteQual'],['Dias afastado','acidenteDiasAfastado'],['Emissão de CAT','acidenteCat'],
     ['Recebe benefício','beneficioRecebe'],['Qual benefício','beneficioQual'],['Quantos filhos','filhosQtd'],['Refeições por dia','refeicoesDia'],['Casa tem banheiro','casaBanheiro'],
-    ['Relato livre','relato']
+    ['Relato livre','relato'],['Coordenadas','gps'],['Editada em','editadoEm']
   ];
   function csvCell(v){ v = (v==null?'':String(v)); return '"' + v.replace(/"/g,'""').replace(/\r?\n/g,' ') + '"'; }
   document.getElementById('export-csv').addEventListener('click', function(){
@@ -1067,7 +1238,7 @@
     if(e.relato) blocks += '<div class="p-block"><div class="p-label">Relato livre do trabalhador</div><div class="p-value">'+escapeHtml(e.relato).replace(/\n/g,'<br>')+'</div></div>';
     return '<div class="p-entry">'+
       '<div class="p-title">Ficha de Entrevista com Trabalhador'+(total>1?(' — '+(idx+1)+' de '+total):'')+'</div>'+
-      '<div class="p-sub">'+escapeHtml(e.nome||'')+(e.empregador?(' · '+escapeHtml(e.empregador)):'')+' · gerado em '+new Date().toLocaleString('pt-BR')+'</div>'+
+      '<div class="p-sub">'+escapeHtml(e.nome||'')+(e.empregador?(' · '+escapeHtml(e.empregador)):'')+' · gerado em '+new Date().toLocaleString('pt-BR')+(e.editadoEm?(' · ficha editada em '+fmtDateTime(e.editadoEm)):'')+'</div>'+
       '<div class="p-cols">'+sectionsHtml+'</div>'+
       blocks +
       '<div class="p-legal">'+LEGAL_NOTE+'</div>'+
@@ -1089,6 +1260,31 @@
     if(e) printEntries([e]);
   });
   document.getElementById('export-pdf-all').addEventListener('click', function(){ printEntries(entries); });
+
+  /* ---------- resumo em PDF ---------- */
+  document.getElementById('export-resumo-pdf').addEventListener('click', function(){
+    if(entries.length===0){ toast('Nenhum registro para resumir'); return; }
+    var map = groupByEmployer(entries);
+    var body = Object.keys(map).sort().map(function(emp){
+      var list = map[emp];
+      var rows = CHECKS.map(function(c){
+        var n = list.filter(c[1]).length;
+        if(n===0) return '';
+        return '<div class="p-row"><div class="p-label">'+escapeHtml(c[0])+'</div><div class="p-value">'+n+' de '+list.length+'</div></div>';
+      }).filter(Boolean).join('');
+      return '<div class="p-section">'+escapeHtml(emp)+'</div>'+
+        '<div class="p-row"><div class="p-label">Trabalhadores entrevistados</div><div class="p-value">'+list.length+'</div></div>'+
+        (rows || '<div class="p-row"><div class="p-label">Pontos de atenção</div><div class="p-value">nenhum registrado</div></div>');
+    }).join('');
+    document.getElementById('print-area').innerHTML =
+      '<div class="p-entry">'+
+        '<div class="p-title">Resumo de Entrevistas por Empregador</div>'+
+        '<div class="p-sub">'+entries.length+' ficha(s) · gerado em '+new Date().toLocaleString('pt-BR')+'</div>'+
+        '<div class="p-cols">'+body+'</div>'+
+        '<div class="p-legal">'+LEGAL_NOTE+'</div>'+
+      '</div>';
+    setTimeout(function(){ window.print(); }, 80);
+  });
 
   /* ---------- backup ---------- */
   document.getElementById('backup-menu').addEventListener('click', function(){
@@ -1126,6 +1322,7 @@
   restoreDraft();
   applyAllConditionals();
   refreshIdade();
+  syncGpsHint();
   refreshUI();
   renderList();
 })();
