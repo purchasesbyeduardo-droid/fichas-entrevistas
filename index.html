@@ -135,6 +135,23 @@
   .pill{border:1px dashed var(--line);background:#f7f6f1;color:var(--ink-soft);font-size:12.5px;font-weight:600;padding:6px 11px;border-radius:14px;cursor:pointer;white-space:nowrap;transition:transform .06s;}
   .pill:active{transform:scale(.95);}
   body.sol .pill{border-style:solid;background:#fff;}
+  .ctx-bar{background:var(--navy-2);color:#e7ecf5;font-size:12px;font-weight:600;padding:6px 16px;display:none;align-items:center;gap:8px;}
+  .ctx-bar.show{display:flex;}
+  .ctx-bar .ctx-emp{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ctx-bar .ctx-count{flex:0 0 auto;color:#c3ccdd;font-weight:700;}
+  .tabpane{animation:fadeSlide .22s ease;}
+  @keyframes fadeSlide{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
+  .backup-warn{background:#fdf6e3;border:1px solid #e6d9a8;color:#7a5c12;font-size:12.5px;font-weight:600;padding:10px 12px;border-radius:8px;margin-bottom:10px;display:none;align-items:center;gap:10px;}
+  .backup-warn.show{display:flex;}
+  .backup-warn button{flex:0 0 auto;background:#7a5c12;color:#fff;border:none;border-radius:6px;padding:7px 11px;font-size:12px;font-weight:700;cursor:pointer;}
+  .emp-header{border-left:5px solid transparent;}
+  .emp-menu{flex:0 0 auto;background:rgba(255,255,255,.16);border:none;color:#fff;font-size:12px;font-weight:700;padding:5px 9px;border-radius:6px;cursor:pointer;margin-left:8px;}
+  .emp-group.arquivado .emp-header{opacity:.62;}
+  .arch-toggle{width:100%;background:none;border:1px dashed var(--line);color:var(--ink-soft);font-size:12.5px;font-weight:600;padding:10px;border-radius:8px;cursor:pointer;margin-bottom:12px;}
+  .detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 14px;}
+  .detail-grid .detail-section-title{grid-column:1 / -1;}
+  .detail-field{margin-bottom:9px;}
+  .detail-full{grid-column:1 / -1;}
   .resumo-actions{margin-bottom:10px;}
   .resumo-actions button{width:100%;background:#eee7d3;border:1px solid #ddd0a5;color:var(--gold-2);font-weight:700;font-size:13.5px;padding:12px;border-radius:8px;cursor:pointer;}
   .toast{position:fixed;top:14px;left:50%;transform:translateX(-50%);background:var(--navy);color:#fff;padding:11px 18px;border-radius:20px;font-size:14px;font-weight:600;z-index:100;opacity:0;pointer-events:none;transition:opacity .25s, top .25s;max-width:85vw;text-align:center;}
@@ -192,11 +209,12 @@
     <button data-tab="resumo">Resumo</button>
   </nav>
   <div class="progress-wrap"><div class="progress-bar" id="progress-bar"></div></div>
+  <div class="ctx-bar" id="ctx-bar"><span class="ctx-emp" id="ctx-emp"></span><span class="ctx-count" id="ctx-count"></span></div>
 </header>
 
 <main>
 
-  <div id="tab-new">
+  <div class="tabpane" id="tab-new">
     <div class="edit-banner" id="edit-banner" style="display:none;"></div>
     <div class="quickbar" id="quickbar">
       <button id="btn-repeat-local">↺ Repetir empregador</button>
@@ -208,6 +226,8 @@
       <label>Nome do empregador</label>
       <input type="text" id="f-empregador" list="empregadores-list" placeholder="Ex.: Sítio Arcanjo">
       <datalist id="empregadores-list"></datalist>
+      <label>CNPJ / CPF do empregador</label>
+      <input type="text" id="f-empregadorDoc" inputmode="numeric" maxlength="18" placeholder="Opcional — agrupa mesmo com nome diferente">
       <label>Data da entrevista</label>
       <input type="date" id="f-data">
       <label>Coordenadas do local</label>
@@ -489,18 +509,20 @@
     <p class="hint" style="text-align:center;">Rascunho salvo automaticamente enquanto você preenche.</p>
   </div>
 
-  <div id="tab-list" style="display:none;">
+  <div class="tabpane" id="tab-list" style="display:none;">
     <div class="search-bar"><input type="text" id="search" placeholder="Buscar por nome, empregador ou função..."></div>
+    <div class="backup-warn" id="backup-warn"><span id="backup-warn-txt"></span><button id="backup-warn-btn">Exportar</button></div>
     <div class="filter-row" id="filter-row"></div>
+    <button class="arch-toggle" id="arch-toggle" style="display:none;"></button>
     <div id="entries-list"></div>
   </div>
 
-  <div id="tab-resumo" style="display:none;">
+  <div class="tabpane" id="tab-resumo" style="display:none;">
     <div class="resumo-actions"><button id="export-resumo-pdf">📄 Exportar resumo em PDF</button></div>
     <div id="resumo-content"></div>
   </div>
 
-  <div id="tab-detail" style="display:none;">
+  <div class="tabpane" id="tab-detail" style="display:none;">
     <div class="top-actions">
       <button class="icon-btn" id="back-to-list">‹ Voltar</button>
       <div style="display:flex;gap:14px;">
@@ -540,6 +562,8 @@
   var STORAGE_KEY = 'entrevistas_fiscalizacao_v4';
   var DRAFT_KEY = 'entrevistas_fiscalizacao_draft_v4';
   var SOL_KEY = 'entrevistas_modo_sol';
+  var ARQ_KEY = 'entrevistas_arquivados';
+  var BKP_KEY = 'entrevistas_ultimo_backup';
   var LEGAL_NOTE = 'Entrevista realizada em caráter sigiloso nos termos do art. 18, § 2º, da Lei n.º 10.593/2002 e art. 9º, § 3º, do Decreto n.º 4.552/2002 (Regulamento da Inspeção do Trabalho).';
 
   function loadEntries(){ try{ var raw = localStorage.getItem(STORAGE_KEY); return raw ? JSON.parse(raw) : []; }catch(e){ return []; } }
@@ -575,6 +599,9 @@
 
   function showTab(name){
     Object.keys(tabs).forEach(function(k){ tabs[k].style.display = (k===name)?'block':'none'; });
+    var pane = tabs[name];
+    if(pane){ pane.style.animation='none'; void pane.offsetWidth; pane.style.animation=''; }
+    refreshCtxBar(name);
     bars.new.style.display = (name==='new' && !editingId) ? 'flex' : 'none';
     bars.edit.style.display = (name==='new' && editingId) ? 'flex' : 'none';
     bars.list.style.display = (name==='list') ? 'flex' : 'none';
@@ -692,6 +719,21 @@
     int = int.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
     return 'R$ ' + int + ',' + cents;
   }
+  function maskDoc(v){
+    var d = onlyDigits(v).slice(0,14);
+    if(d.length <= 11){
+      if(d.length > 9) return d.slice(0,3)+'.'+d.slice(3,6)+'.'+d.slice(6,9)+'-'+d.slice(9);
+      if(d.length > 6) return d.slice(0,3)+'.'+d.slice(3,6)+'.'+d.slice(6);
+      if(d.length > 3) return d.slice(0,3)+'.'+d.slice(3);
+      return d;
+    }
+    var o = d.slice(0,2)+'.'+d.slice(2,5)+'.'+d.slice(5,8)+'/'+d.slice(8,12);
+    if(d.length > 12) o += '-'+d.slice(12);
+    return o;
+  }
+  var docEl = document.getElementById('f-empregadorDoc');
+  docEl.addEventListener('input', function(){ docEl.value = maskDoc(docEl.value); });
+
   var salEl = document.getElementById('f-salario');
   salEl.addEventListener('input', function(){ salEl.value = maskMoney(salEl.value); });
 
@@ -745,9 +787,9 @@
   nascEl.addEventListener('change', refreshIdade);
 
   /* ---------- campos ---------- */
-  var TEXT_IDS = ['f-empregador','f-data','f-gps','f-nome','f-cpf','f-nascimento','f-mae','f-naturalidade','f-funcao','f-inicio','f-salario','f-producaoMetrica','f-valeTransporteDetalhe','f-valeAlimentacaoDetalhe','f-descontaQuais','f-entrada','f-saidaIntervalo','f-retornoIntervalo','f-saida','f-jornadaExcecoes','f-folgas','f-ultimoTreinamento','f-ultimoExame','f-epiOutros','f-acidenteQual','f-acidenteDiasAfastado','f-beneficioQual','f-filhosQtd','f-refeicoesDia','f-relato'];
+  var TEXT_IDS = ['f-empregador','f-empregadorDoc','f-data','f-gps','f-nome','f-cpf','f-nascimento','f-mae','f-naturalidade','f-funcao','f-inicio','f-salario','f-producaoMetrica','f-valeTransporteDetalhe','f-valeAlimentacaoDetalhe','f-descontaQuais','f-entrada','f-saidaIntervalo','f-retornoIntervalo','f-saida','f-jornadaExcecoes','f-folgas','f-ultimoTreinamento','f-ultimoExame','f-epiOutros','f-acidenteQual','f-acidenteDiasAfastado','f-beneficioQual','f-filhosQtd','f-refeicoesDia','f-relato'];
   var GROUP_NAMES = ['genero','carteira','salarioUnidade','formaPagamento','periodicidade','atrasoSalario','decimoTerceiro','feriasEmDia','valeTransporte','valeAlimentacao','desconta','diasSemana','horasExtras','horasExtrasTipo','treinamentoAdmissional','treinamentoPeriodico','exameAdmissional','examePeriodico','epiRecebeu','epiQuais','epiPagou','epiUsa','acidenteSofreu','acidenteTipo','acidenteCat','beneficioRecebe','casaBanheiro'];
-  var LOCAL_TEXT_IDS = ['f-empregador','f-data','f-gps'];
+  var LOCAL_TEXT_IDS = ['f-empregador','f-empregadorDoc','f-data','f-gps'];
   var PERSON_TEXT_IDS = TEXT_IDS.filter(function(id){ return LOCAL_TEXT_IDS.indexOf(id)===-1; });
 
   function val(id){ var el = document.getElementById(id); return el ? el.value.trim() : ''; }
@@ -924,7 +966,8 @@
     var el=document.getElementById(id);
     if(el) el.addEventListener('input', function(){ scheduleDraftSave(); refreshUI(); });
   });
-  document.getElementById('f-empregador').addEventListener('input', refreshFuncaoFreq);
+  document.getElementById('f-empregador').addEventListener('input', function(){ refreshFuncaoFreq(); refreshCtxBar('new'); });
+  document.getElementById('f-empregadorDoc').addEventListener('input', function(){ refreshCtxBar('new'); });
   document.getElementById('f-empregador').addEventListener('change', refreshFuncaoFreq);
 
   /* ---------- formatadores ---------- */
@@ -988,10 +1031,56 @@
     return f;
   }
 
+  /* chave de agrupamento: CNPJ/CPF quando houver, senao o nome */
+  function empKey(e){
+    var d = onlyDigits(e.empregadorDoc || '');
+    if(d) return 'doc:' + d;
+    return 'nome:' + ((e.empregador || '(sem empregador)').trim().toLowerCase());
+  }
+  /* nome exibido: o da ficha mais recente daquele grupo */
+  function empLabel(list){
+    var comNome = list.filter(function(e){ return (e.empregador||'').trim(); });
+    if(!comNome.length) return '(sem empregador)';
+    comNome.sort(function(a,b){ return (b.criado||'').localeCompare(a.criado||''); });
+    return comNome[0].empregador.trim();
+  }
   function groupByEmployer(list){
     var map = {};
-    list.forEach(function(e){ var k = e.empregador || '(sem empregador)'; (map[k] = map[k] || []).push(e); });
+    list.forEach(function(e){ var k = empKey(e); (map[k] = map[k] || []).push(e); });
     return map;
+  }
+
+  /* cor estavel derivada da chave do empregador */
+  function empColor(key){
+    var h = 0;
+    for(var i=0;i<key.length;i++){ h = (h*31 + key.charCodeAt(i)) % 360; }
+    return 'hsl(' + h + ', 46%, 52%)';
+  }
+
+  /* arquivamento por empregador */
+  function loadArquivados(){ try{ return JSON.parse(localStorage.getItem(ARQ_KEY)) || []; }catch(e){ return []; } }
+  var arquivados = loadArquivados();
+  function saveArquivados(){ localStorage.setItem(ARQ_KEY, JSON.stringify(arquivados)); }
+  function isArquivado(key){ return arquivados.indexOf(key) > -1; }
+  function toggleArquivado(key){
+    var i = arquivados.indexOf(key);
+    if(i > -1) arquivados.splice(i,1); else arquivados.push(key);
+    saveArquivados();
+  }
+  var mostrarArquivadas = false;
+
+  /* faixa de contexto */
+  function refreshCtxBar(tabName){
+    var bar = document.getElementById('ctx-bar');
+    if(tabName !== 'new'){ bar.classList.remove('show'); return; }
+    var nome = val('f-empregador');
+    if(!nome){ bar.classList.remove('show'); return; }
+    var atual = { empregador: nome, empregadorDoc: val('f-empregadorDoc') };
+    var k = empKey(atual);
+    var n = entries.filter(function(e){ return empKey(e) === k; }).length;
+    document.getElementById('ctx-emp').textContent = nome;
+    document.getElementById('ctx-count').textContent = editingId ? 'editando' : ((n+1) + 'ª entrevista');
+    bar.classList.add('show');
   }
 
   var collapsed = {};
@@ -1018,16 +1107,30 @@
     var q = (document.getElementById('search').value || '').toLowerCase();
     var wrap = document.getElementById('entries-list');
     renderFilterRow();
+    refreshBackupWarn();
     var check = null;
     if(activeFilter !== '__all__'){
       var found = CHECKS.filter(function(c){ return c[0]===activeFilter; })[0];
       if(found) check = found[1]; else activeFilter = '__all__';
     }
+    var qDigits = q.replace(/\D/g,'');
     var filtered = entries.filter(function(e){
       if(check && !check(e)) return false;
+      if(!mostrarArquivadas && isArquivado(empKey(e))) return false;
       if(!q) return true;
-      return ((e.nome||'')+' '+(e.empregador||'')+' '+(e.funcao||'')).toLowerCase().indexOf(q) > -1;
+      var texto = ((e.nome||'')+' '+(e.empregador||'')+' '+(e.funcao||'')).toLowerCase();
+      if(texto.indexOf(q) > -1) return true;
+      if(qDigits && onlyDigits(e.cpf||'').indexOf(qDigits) > -1) return true;
+      return false;
     });
+    var nArquivadas = entries.filter(function(e){ return isArquivado(empKey(e)); }).length;
+    var archBtn = document.getElementById('arch-toggle');
+    if(nArquivadas > 0){
+      archBtn.style.display = 'block';
+      archBtn.textContent = mostrarArquivadas
+        ? 'Ocultar fiscalizações arquivadas'
+        : 'Mostrar fiscalizações arquivadas (' + nArquivadas + ')';
+    } else { archBtn.style.display = 'none'; }
     if(filtered.length===0){
       wrap.innerHTML = entries.length
         ? '<div class="empty"><div class="big">🔎</div>Nenhuma ficha corresponde a esse filtro.</div>'
@@ -1035,16 +1138,20 @@
       return;
     }
     var map = groupByEmployer(filtered);
-    wrap.innerHTML = Object.keys(map).sort().map(function(emp){
-      var list = map[emp];
-      var isCollapsed = collapsed[emp];
-      return '<div class="emp-group">'+
-        '<div class="emp-header" data-emp-toggle="'+escapeAttr(emp)+'">'+
-          '<span class="emp-name">'+escapeHtml(emp)+'</span>'+
-          '<span class="emp-count">'+list.length+(list.length===1?' trabalhador':' trabalhadores')+' '+(isCollapsed?'▸':'▾')+'</span>'+
+    var keys = Object.keys(map).sort(function(a,b){ return empLabel(map[a]).localeCompare(empLabel(map[b])); });
+    wrap.innerHTML = keys.map(function(key){
+      var list = map[key];
+      var label = empLabel(list);
+      var isCollapsed = collapsed[key];
+      var arq = isArquivado(key);
+      return '<div class="emp-group'+(arq?' arquivado':'')+'">'+
+        '<div class="emp-header" style="border-left-color:'+empColor(key)+'" data-emp-toggle="'+escapeAttr(key)+'">'+
+          '<span class="emp-name">'+escapeHtml(label)+(arq?' · arquivada':'')+'</span>'+
+          '<span class="emp-count">'+list.length+(list.length===1?' trab.':' trab.')+' '+(isCollapsed?'▸':'▾')+'</span>'+
+          '<button class="emp-menu" data-emp-arch="'+escapeAttr(key)+'">'+(arq?'Reativar':'Arquivar')+'</button>'+
         '</div>'+
         '<div class="emp-body'+(isCollapsed?' collapsed':'')+'">'+
-          '<div class="emp-actions"><button data-emp-pdf="'+escapeAttr(emp)+'">📄 PDF desta empresa</button></div>'+
+          '<div class="emp-actions"><button data-emp-pdf="'+escapeAttr(key)+'">📄 PDF desta empresa</button></div>'+
           list.map(function(e){
             var fl = flagsFor(e);
             return '<div class="entry" data-id="'+e.id+'">'+
@@ -1058,28 +1165,43 @@
     }).join('');
   }
   document.getElementById('search').addEventListener('input', renderList);
+  document.getElementById('arch-toggle').addEventListener('click', function(){
+    mostrarArquivadas = !mostrarArquivadas; renderList();
+  });
   document.getElementById('entries-list').addEventListener('click', function(e){
+    var archBtn2 = e.target.closest('[data-emp-arch]');
+    if(archBtn2){
+      e.stopPropagation();
+      var ak = archBtn2.dataset.empArch;
+      toggleArquivado(ak);
+      var agoraArquivado = isArquivado(ak);
+      renderList();
+      toast(agoraArquivado ? 'Fiscalização arquivada' : 'Fiscalização reativada');
+      return;
+    }
     var toggle = e.target.closest('[data-emp-toggle]');
     if(toggle){ var k = toggle.dataset.empToggle; collapsed[k] = !collapsed[k]; renderList(); return; }
     var pdfBtn = e.target.closest('[data-emp-pdf]');
-    if(pdfBtn){ printEntries(entries.filter(function(x){ return (x.empregador||'(sem empregador)')===pdfBtn.dataset.empPdf; })); return; }
+    if(pdfBtn){ printEntries(entries.filter(function(x){ return empKey(x)===pdfBtn.dataset.empPdf; })); return; }
     var card = e.target.closest('.entry');
     if(card) openDetail(card.dataset.id);
   });
 
   function renderResumo(){
     var wrap = document.getElementById('resumo-content');
-    if(entries.length===0){ wrap.innerHTML = '<div class="empty"><div class="big">📊</div>Nenhum registro para resumir.</div>'; return; }
-    var map = groupByEmployer(entries);
-    wrap.innerHTML = Object.keys(map).sort().map(function(emp){
-      var list = map[emp];
+    var ativos = entries.filter(function(e){ return !isArquivado(empKey(e)); });
+    if(ativos.length===0){ wrap.innerHTML = '<div class="empty"><div class="big">📊</div>Nenhum registro ativo para resumir.</div>'; return; }
+    var map = groupByEmployer(ativos);
+    var keys = Object.keys(map).sort(function(a,b){ return empLabel(map[a]).localeCompare(empLabel(map[b])); });
+    wrap.innerHTML = keys.map(function(key){
+      var list = map[key];
       var rows = CHECKS.map(function(c){
         var n = list.filter(c[1]).length;
         if(n===0) return '';
         return '<div class="sum-row"><span>'+c[0]+'</span><span class="sum-val bad">'+n+' de '+list.length+'</span></div>';
       }).filter(Boolean).join('');
-      return '<div class="card">'+
-        '<p class="section-label">'+escapeHtml(emp)+'</p>'+
+      return '<div class="card" style="border-left:4px solid '+empColor(key)+';">'+
+        '<p class="section-label">'+escapeHtml(empLabel(list))+'</p>'+
         '<div class="sum-row"><span>Trabalhadores entrevistados</span><span class="sum-val">'+list.length+'</span></div>'+
         (rows || '<div class="sum-row"><span>Nenhum ponto de atenção registrado</span><span class="sum-val">—</span></div>')+
       '</div>';
@@ -1090,7 +1212,7 @@
   var currentDetailId = null;
   function detailSections(e){
     return [
-      {title:'Empregador e data', rows:[['Empregador', e.empregador],['Data da entrevista', fmtDate(e.data)],['Coordenadas do local', e.gps],['Editada em', fmtDateTime(e.editadoEm)]]},
+      {title:'Empregador e data', rows:[['Empregador', e.empregador],['CNPJ/CPF', e.empregadorDoc],['Data da entrevista', fmtDate(e.data)],['Coordenadas do local', e.gps],['Editada em', fmtDateTime(e.editadoEm)]]},
       {title:'Identificação', rows:[['Nome', e.nome],['CPF', e.cpf],['Nascimento', fmtDate(e.nascimento)],['Idade', idadeDe(e)],['Nome da mãe', e.mae],['Gênero', e.genero],['Onde nasceu', e.naturalidade]]},
       {title:'Função e vínculo', rows:[['Função', e.funcao],['Começou a trabalhar', fmtMonth(e.inicio)],['Carteira registrada', e.carteira]]},
       {title:'Remuneração', rows:[['Salário', fmtSalario(e)],['Métrica de produção', e.producaoMetrica],['Forma de pagamento', e.formaPagamento],['Periodicidade', e.periodicidade],['Atraso de salário', e.atrasoSalario],['13º pago', e.decimoTerceiro],['Férias em dia', e.feriasEmDia],['Vale-transporte', e.valeTransporte],['VT valor/tipo', e.valeTransporteDetalhe],['Vale-alimentação', e.valeAlimentacao],['VA valor/tipo', e.valeAlimentacaoDetalhe],['Desconta valores', e.desconta],['Quais descontos', e.descontaQuais]]},
@@ -1110,8 +1232,8 @@
       }).join('');
       return rowsHtml ? ('<div class="detail-section-title">'+sec.title+'</div>'+rowsHtml) : '';
     }).join('');
-    if(e.relato) html += '<div class="detail-section-title">Relato livre</div><div class="detail-value">'+escapeHtml(e.relato).replace(/\n/g,'<br>')+'</div>';
-    document.getElementById('detail-content').innerHTML = '<div class="card">' + html + '</div>';
+    if(e.relato) html += '<div class="detail-section-title">Relato livre</div><div class="detail-value detail-full">'+escapeHtml(e.relato).replace(/\n/g,'<br>')+'</div>';
+    document.getElementById('detail-content').innerHTML = '<div class="card"><div class="detail-grid">' + html + '</div></div>';
     Object.keys(tabs).forEach(function(k){ tabs[k].style.display = (k==='detail')?'block':'none'; });
     bars.new.style.display='none'; bars.list.style.display='none';
     tabButtons.forEach(function(b){ b.classList.toggle('active', b.dataset.tab==='list'); });
@@ -1197,7 +1319,7 @@
 
   /* ---------- CSV ---------- */
   var CSV_COLS = [
-    ['Empregador','empregador'],['Data da entrevista','data'],['Nome','nome'],['CPF','cpf'],
+    ['Empregador','empregador'],['CNPJ/CPF do empregador','empregadorDoc'],['Data da entrevista','data'],['Nome','nome'],['CPF','cpf'],
     ['Nascimento','nascimento'],['Nome da mãe','mae'],['Gênero','genero'],['Onde nasceu','naturalidade'],
     ['Função','funcao'],['Começou a trabalhar','inicio'],['Carteira registrada','carteira'],
     ['Salário','salario'],['Salário por','salarioUnidade'],['Métrica de produção','producaoMetrica'],
@@ -1261,25 +1383,53 @@
   });
   document.getElementById('export-pdf-all').addEventListener('click', function(){ printEntries(entries); });
 
+  /* ---------- aviso de backup pendente ---------- */
+  function refreshBackupWarn(){
+    var box = document.getElementById('backup-warn');
+    var info = null;
+    try{ info = JSON.parse(localStorage.getItem(BKP_KEY)); }catch(e){}
+    if(entries.length === 0){ box.classList.remove('show'); return; }
+    var novas, dias = null;
+    if(!info){ novas = entries.length; }
+    else {
+      novas = entries.filter(function(e){ return (e.criado||'') > info.em || (e.editadoEm||'') > info.em; }).length;
+      dias = Math.floor((Date.now() - new Date(info.em).getTime()) / 86400000);
+    }
+    if(novas === 0){ box.classList.remove('show'); return; }
+    var txt = novas + (novas===1 ? ' ficha sem backup' : ' fichas sem backup');
+    if(dias !== null) txt += dias === 0 ? ' · último backup hoje' : (' · último backup há ' + dias + (dias===1?' dia':' dias'));
+    else txt += ' · nenhum backup feito ainda';
+    document.getElementById('backup-warn-txt').textContent = txt;
+    box.classList.add('show');
+  }
+  document.getElementById('backup-warn-btn').addEventListener('click', function(){
+    downloadBlob(JSON.stringify({versao:7, exportadoEm:new Date().toISOString(), fichas:entries}, null, 2), 'backup_entrevistas_'+todayISO()+'.json', 'application/json');
+    localStorage.setItem(BKP_KEY, JSON.stringify({em:new Date().toISOString(), qtd:entries.length}));
+    refreshBackupWarn();
+    toast('Backup gerado — guarde este arquivo');
+  });
+
   /* ---------- resumo em PDF ---------- */
   document.getElementById('export-resumo-pdf').addEventListener('click', function(){
     if(entries.length===0){ toast('Nenhum registro para resumir'); return; }
-    var map = groupByEmployer(entries);
-    var body = Object.keys(map).sort().map(function(emp){
-      var list = map[emp];
+    var ativos = entries.filter(function(e){ return !isArquivado(empKey(e)); });
+    var map = groupByEmployer(ativos);
+    var keysR = Object.keys(map).sort(function(a,b){ return empLabel(map[a]).localeCompare(empLabel(map[b])); });
+    var body = keysR.map(function(key){
+      var list = map[key];
       var rows = CHECKS.map(function(c){
         var n = list.filter(c[1]).length;
         if(n===0) return '';
         return '<div class="p-row"><div class="p-label">'+escapeHtml(c[0])+'</div><div class="p-value">'+n+' de '+list.length+'</div></div>';
       }).filter(Boolean).join('');
-      return '<div class="p-section">'+escapeHtml(emp)+'</div>'+
+      return '<div class="p-section">'+escapeHtml(empLabel(list))+'</div>'+
         '<div class="p-row"><div class="p-label">Trabalhadores entrevistados</div><div class="p-value">'+list.length+'</div></div>'+
         (rows || '<div class="p-row"><div class="p-label">Pontos de atenção</div><div class="p-value">nenhum registrado</div></div>');
     }).join('');
     document.getElementById('print-area').innerHTML =
       '<div class="p-entry">'+
         '<div class="p-title">Resumo de Entrevistas por Empregador</div>'+
-        '<div class="p-sub">'+entries.length+' ficha(s) · gerado em '+new Date().toLocaleString('pt-BR')+'</div>'+
+        '<div class="p-sub">'+ativos.length+' ficha(s) · gerado em '+new Date().toLocaleString('pt-BR')+'</div>'+
         '<div class="p-cols">'+body+'</div>'+
         '<div class="p-legal">'+LEGAL_NOTE+'</div>'+
       '</div>';
@@ -1291,7 +1441,9 @@
     var choice = prompt('Digite:\n1 = Exportar backup (arquivo .json)\n2 = Importar backup');
     if(choice==='1'){
       if(entries.length===0){ toast('Nenhum registro para exportar'); return; }
-      downloadBlob(JSON.stringify({versao:5, exportadoEm:new Date().toISOString(), fichas:entries}, null, 2), 'backup_entrevistas_'+todayISO()+'.json', 'application/json');
+      downloadBlob(JSON.stringify({versao:7, exportadoEm:new Date().toISOString(), fichas:entries}, null, 2), 'backup_entrevistas_'+todayISO()+'.json', 'application/json');
+      localStorage.setItem(BKP_KEY, JSON.stringify({em:new Date().toISOString(), qtd:entries.length}));
+      refreshBackupWarn();
       toast('Backup gerado — guarde este arquivo');
     } else if(choice==='2'){ document.getElementById('import-file').click(); }
   });
@@ -1324,6 +1476,7 @@
   refreshIdade();
   syncGpsHint();
   refreshUI();
+  refreshCtxBar('new');
   renderList();
 })();
 
