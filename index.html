@@ -152,6 +152,20 @@
   .detail-grid .detail-section-title{grid-column:1 / -1;}
   .detail-field{margin-bottom:9px;}
   .detail-full{grid-column:1 / -1;}
+  .sheet-back{position:fixed;inset:0;background:rgba(12,18,30,.45);z-index:40;display:none;}
+  .sheet-back.show{display:block;}
+  .sheet{position:fixed;left:0;right:0;bottom:0;z-index:41;background:var(--paper-2);border-radius:14px 14px 0 0;padding:14px 14px calc(14px + env(safe-area-inset-bottom));max-width:640px;margin:0 auto;transform:translateY(100%);transition:transform .22s ease;box-shadow:0 -4px 20px rgba(0,0,0,.18);}
+  .sheet.show{transform:translateY(0);}
+  .sheet h3{margin:0 0 3px;font-size:16px;font-weight:700;color:var(--ink);}
+  .sheet p.sheet-sub{margin:0 0 12px;font-size:12.5px;color:var(--ink-soft);}
+  .sheet-item{display:flex;align-items:flex-start;gap:11px;width:100%;text-align:left;background:none;border:1px solid var(--line);border-radius:9px;padding:12px;margin-bottom:8px;cursor:pointer;transition:transform .06s;}
+  .sheet-item:active{transform:scale(.98);}
+  .sheet-item .si-ico{flex:0 0 auto;font-size:18px;line-height:1.2;}
+  .sheet-item .si-txt{flex:1;}
+  .sheet-item .si-txt{display:flex;flex-direction:column;}
+  .sheet-item .si-title{display:block;font-size:14.5px;font-weight:700;color:var(--ink);}
+  .sheet-item .si-desc{display:block;font-size:12px;color:var(--ink-soft);margin-top:3px;line-height:1.35;}
+  .sheet-close{width:100%;background:none;border:none;color:var(--ink-soft);font-size:14px;font-weight:600;padding:12px;cursor:pointer;}
   .resumo-actions{margin-bottom:10px;}
   .resumo-actions button{width:100%;background:#eee7d3;border:1px solid #ddd0a5;color:var(--gold-2);font-weight:700;font-size:13.5px;padding:12px;border-radius:8px;cursor:pointer;}
   .toast{position:fixed;top:14px;left:50%;transform:translateX(-50%);background:var(--navy);color:#fff;padding:11px 18px;border-radius:20px;font-size:14px;font-weight:600;z-index:100;opacity:0;pointer-events:none;transition:opacity .25s, top .25s;max-width:85vw;text-align:center;}
@@ -547,10 +561,40 @@
 </div>
 
 <div class="actions-bar" id="bar-list" style="display:none;">
-  <button class="ghost" id="export-csv">CSV</button>
-  <button class="ghost" id="export-pdf-all">📄 PDF</button>
-  <button class="ghost" id="backup-menu">Backup</button>
-  <button class="primary" id="new-from-list">+ Nova</button>
+  <button class="ghost" id="open-export">⤓ Exportar</button>
+  <button class="primary" id="new-from-list">+ Nova ficha</button>
+</div>
+
+<div class="sheet-back" id="sheet-back"></div>
+<div class="sheet" id="export-sheet">
+  <h3>Exportar</h3>
+  <p class="sheet-sub" id="export-sheet-sub"></p>
+  <button class="sheet-item" id="export-pdf-all">
+    <span class="si-ico">📄</span>
+    <span class="si-txt"><span class="si-title">PDF das fichas</span>
+    <span class="si-desc">Uma ficha por página, agrupadas por empregador. Para imprimir ou anexar ao processo.</span></span>
+  </button>
+  <button class="sheet-item" id="export-csv">
+    <span class="si-ico">▤</span>
+    <span class="si-txt"><span class="si-title">Planilha (CSV)</span>
+    <span class="si-desc">Abre no Excel. Uma linha por trabalhador, todas as colunas.</span></span>
+  </button>
+  <button class="sheet-item" id="export-json">
+    <span class="si-ico">{ }</span>
+    <span class="si-txt"><span class="si-title">JSON estruturado</span>
+    <span class="si-desc">Para colar no Claude e usar na redação de documentos da ação fiscal.</span></span>
+  </button>
+  <button class="sheet-item" id="export-backup">
+    <span class="si-ico">🛡</span>
+    <span class="si-txt"><span class="si-title">Backup completo</span>
+    <span class="si-desc">Cópia de segurança de tudo. Guarde ao fim de cada dia.</span></span>
+  </button>
+  <button class="sheet-item" id="import-backup">
+    <span class="si-ico">↥</span>
+    <span class="si-txt"><span class="si-title">Importar backup</span>
+    <span class="si-desc">Restaura fichas de um arquivo de backup, sem apagar as atuais.</span></span>
+  </button>
+  <button class="sheet-close" id="close-sheet">Cancelar</button>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -1151,7 +1195,7 @@
           '<button class="emp-menu" data-emp-arch="'+escapeAttr(key)+'">'+(arq?'Reativar':'Arquivar')+'</button>'+
         '</div>'+
         '<div class="emp-body'+(isCollapsed?' collapsed':'')+'">'+
-          '<div class="emp-actions"><button data-emp-pdf="'+escapeAttr(key)+'">📄 PDF desta empresa</button></div>'+
+          '<div class="emp-actions"><button data-emp-pdf="'+escapeAttr(key)+'">📄 PDF</button><button data-emp-json="'+escapeAttr(key)+'">{ } JSON</button></div>'+
           list.map(function(e){
             var fl = flagsFor(e);
             return '<div class="entry" data-id="'+e.id+'">'+
@@ -1181,8 +1225,17 @@
     }
     var toggle = e.target.closest('[data-emp-toggle]');
     if(toggle){ var k = toggle.dataset.empToggle; collapsed[k] = !collapsed[k]; renderList(); return; }
+    var jsonBtn = e.target.closest('[data-emp-json]');
+    if(jsonBtn){
+      e.stopPropagation();
+      var jk = jsonBtn.dataset.empJson;
+      var lista = entries.filter(function(x){ return empKey(x)===jk; });
+      var nomeArq = (empLabel(lista) || 'empregador').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9]+/g,'_').toLowerCase();
+      exportarJSON(lista, 'entrevistas_'+nomeArq+'_'+todayISO()+'.json');
+      return;
+    }
     var pdfBtn = e.target.closest('[data-emp-pdf]');
-    if(pdfBtn){ printEntries(entries.filter(function(x){ return empKey(x)===pdfBtn.dataset.empPdf; })); return; }
+    if(pdfBtn){ e.stopPropagation(); printEntries(entries.filter(function(x){ return empKey(x)===pdfBtn.dataset.empPdf; })); return; }
     var card = e.target.closest('.entry');
     if(card) openDetail(card.dataset.id);
   });
@@ -1340,6 +1393,7 @@
   ];
   function csvCell(v){ v = (v==null?'':String(v)); return '"' + v.replace(/"/g,'""').replace(/\r?\n/g,' ') + '"'; }
   document.getElementById('export-csv').addEventListener('click', function(){
+    closeSheet();
     if(entries.length===0){ toast('Nenhum registro para exportar'); return; }
     var sorted = entries.slice().sort(function(a,b){ return (a.empregador||'').localeCompare(b.empregador||''); });
     var head = CSV_COLS.map(function(c){ return csvCell(c[0]); }).join(';');
@@ -1381,7 +1435,147 @@
     var e = entries.find(function(x){ return x.id===currentDetailId; });
     if(e) printEntries([e]);
   });
-  document.getElementById('export-pdf-all').addEventListener('click', function(){ printEntries(entries); });
+  document.getElementById('export-pdf-all').addEventListener('click', function(){ closeSheet(); setTimeout(function(){ printEntries(entries); }, 240); });
+
+  /* ---------- JSON estruturado ---------- */
+  var DIAS_MAP = {'Dom':'dom','Seg':'seg','Ter':'ter','Qua':'qua','Qui':'qui','Sex':'sex','Sáb':'sab'};
+
+  function simNao(v){
+    if(v === 'Sim') return true;
+    if(v === 'Não') return false;
+    return null;               // "Não sabe", "N/A" ou vazio
+  }
+  function txtOuNull(v){ return (v && String(v).trim()) ? String(v).trim() : null; }
+  function numOuNull(v){
+    var d = (v==null?'':String(v)).replace(/[^\d,.-]/g,'').replace(/\./g,'').replace(',', '.');
+    if(!d) return null;
+    var n = parseFloat(d);
+    return isNaN(n) ? null : n;
+  }
+  function intOuNull(v){
+    var d = onlyDigits(v||'');
+    return d ? parseInt(d,10) : null;
+  }
+  function listaOuNull(v){
+    if(!v) return null;
+    var arr = String(v).split(',').map(function(x){ return x.trim(); }).filter(Boolean);
+    return arr.length ? arr : null;
+  }
+  function coordsOuNull(g){
+    if(!g) return null;
+    var m = String(g).match(/(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)/);
+    if(!m) return null;
+    return { latitude: parseFloat(m[1]), longitude: parseFloat(m[2]) };
+  }
+
+  function entrevistaJSON(e){
+    var diasArr = listaOuNull(e.diasSemana);
+    return {
+      nome: txtOuNull(e.nome),
+      cpf: txtOuNull(e.cpf),
+      nascimento: txtOuNull(e.nascimento),
+      idade: calcIdade(e.nascimento),
+      menor_de_idade: calcIdade(e.nascimento) === null ? null : (calcIdade(e.nascimento) < 18),
+      nome_mae: txtOuNull(e.mae),
+      genero: txtOuNull(e.genero),
+      naturalidade: txtOuNull(e.naturalidade),
+      funcao: txtOuNull(e.funcao),
+      inicio_trabalho: txtOuNull(e.inicio),
+      carteira_registrada: simNao(e.carteira),
+      carteira_resposta: txtOuNull(e.carteira),
+      remuneracao: {
+        salario: numOuNull(e.salario),
+        unidade: txtOuNull(e.salarioUnidade),
+        metrica_producao: txtOuNull(e.producaoMetrica),
+        forma_pagamento: txtOuNull(e.formaPagamento),
+        periodicidade: txtOuNull(e.periodicidade),
+        atraso_salario: simNao(e.atrasoSalario),
+        decimo_terceiro_pago: simNao(e.decimoTerceiro),
+        ferias_em_dia: simNao(e.feriasEmDia),
+        vale_transporte: simNao(e.valeTransporte),
+        vale_transporte_detalhe: txtOuNull(e.valeTransporteDetalhe),
+        vale_alimentacao: simNao(e.valeAlimentacao),
+        vale_alimentacao_detalhe: txtOuNull(e.valeAlimentacaoDetalhe),
+        ha_descontos: simNao(e.desconta),
+        descontos_quais: txtOuNull(e.descontaQuais)
+      },
+      jornada: {
+        entrada: txtOuNull(e.entrada),
+        saida_intervalo: txtOuNull(e.saidaIntervalo),
+        retorno_intervalo: txtOuNull(e.retornoIntervalo),
+        saida: txtOuNull(e.saida),
+        dias: diasArr ? diasArr.map(function(d){ return DIAS_MAP[d] || d.toLowerCase(); }) : null,
+        excecoes_horario: txtOuNull(e.jornadaExcecoes),
+        folgas: txtOuNull(e.folgas),
+        faz_horas_extras: simNao(e.horasExtras),
+        horas_extras_tratamento: txtOuNull(e.horasExtrasTipo)
+      },
+      sst: {
+        treinamento_admissional: simNao(e.treinamentoAdmissional),
+        treinamento_periodico: simNao(e.treinamentoPeriodico),
+        ultimo_treinamento: txtOuNull(e.ultimoTreinamento),
+        exame_admissional: simNao(e.exameAdmissional),
+        exame_periodico_em_dia: simNao(e.examePeriodico),
+        ultimo_exame: txtOuNull(e.ultimoExame),
+        recebeu_epi: txtOuNull(e.epiRecebeu),
+        quais_epi: listaOuNull(e.epiQuais),
+        outros_epi: txtOuNull(e.epiOutros),
+        pagou_pelos_epi: simNao(e.epiPagou),
+        utiliza_epi: simNao(e.epiUsa)
+      },
+      acidente: {
+        sofreu_acidente: simNao(e.acidenteSofreu),
+        tipo: txtOuNull(e.acidenteTipo),
+        descricao: txtOuNull(e.acidenteQual),
+        dias_afastado: intOuNull(e.acidenteDiasAfastado),
+        cat_emitida: simNao(e.acidenteCat)
+      },
+      condicoes_sociais: {
+        recebe_beneficio: simNao(e.beneficioRecebe),
+        qual_beneficio: txtOuNull(e.beneficioQual),
+        quantidade_filhos: intOuNull(e.filhosQtd),
+        refeicoes_por_dia: intOuNull(e.refeicoesDia),
+        casa_tem_banheiro: simNao(e.casaBanheiro)
+      },
+      relato_livre: txtOuNull(e.relato),
+      data_entrevista: txtOuNull(e.data),
+      coordenadas: coordsOuNull(e.gps),
+      editada_em: txtOuNull(e.editadoEm)
+    };
+  }
+
+  function empregadorJSON(list){
+    var datas = list.map(function(e){ return e.data; }).filter(Boolean).sort();
+    var docRef = list.filter(function(e){ return onlyDigits(e.empregadorDoc||''); })[0];
+    var coordRef = list.map(function(e){ return coordsOuNull(e.gps); }).filter(Boolean)[0] || null;
+    var indicadores = {};
+    CHECKS.forEach(function(c){
+      var n = list.filter(c[1]).length;
+      if(n > 0) indicadores[c[0]] = { trabalhadores: n, de: list.length };
+    });
+    return {
+      empregador: {
+        razao_social: empLabel(list),
+        cnpj_cpf: docRef ? docRef.empregadorDoc : null
+      },
+      data_entrevistas: datas.length ? (datas[0] === datas[datas.length-1] ? datas[0] : (datas[0] + ' a ' + datas[datas.length-1])) : null,
+      local: coordRef,
+      total_entrevistados: list.length,
+      indicadores: Object.keys(indicadores).length ? indicadores : null,
+      entrevistas: list.map(entrevistaJSON)
+    };
+  }
+
+  function exportarJSON(list, nomeArquivo){
+    if(!list || !list.length){ toast('Nenhum registro para exportar'); return; }
+    var map = groupByEmployer(list);
+    var keys = Object.keys(map).sort(function(a,b){ return empLabel(map[a]).localeCompare(empLabel(map[b])); });
+    var payload = keys.length === 1
+      ? empregadorJSON(map[keys[0]])
+      : { gerado_em: new Date().toISOString(), empregadores: keys.map(function(k){ return empregadorJSON(map[k]); }) };
+    downloadBlob(JSON.stringify(payload, null, 2), nomeArquivo, 'application/json');
+    toast('JSON gerado');
+  }
 
   /* ---------- aviso de backup pendente ---------- */
   function refreshBackupWarn(){
@@ -1402,6 +1596,38 @@
     document.getElementById('backup-warn-txt').textContent = txt;
     box.classList.add('show');
   }
+  /* ---------- menu Exportar ---------- */
+  var sheet = document.getElementById('export-sheet');
+  var sheetBack = document.getElementById('sheet-back');
+  function openSheet(){
+    var ativas = entries.filter(function(e){ return !isArquivado(empKey(e)); }).length;
+    document.getElementById('export-sheet-sub').textContent =
+      entries.length + (entries.length===1 ? ' ficha salva' : ' fichas salvas') +
+      (ativas !== entries.length ? (' · ' + ativas + ' em fiscalizações ativas') : '');
+    sheetBack.classList.add('show'); sheet.classList.add('show');
+  }
+  function closeSheet(){ sheet.classList.remove('show'); sheetBack.classList.remove('show'); }
+  document.getElementById('open-export').addEventListener('click', openSheet);
+  document.getElementById('close-sheet').addEventListener('click', closeSheet);
+  sheetBack.addEventListener('click', closeSheet);
+
+  document.getElementById('export-json').addEventListener('click', function(){
+    closeSheet();
+    exportarJSON(entries, 'entrevistas_'+todayISO()+'.json');
+  });
+  document.getElementById('export-backup').addEventListener('click', function(){
+    closeSheet();
+    if(entries.length===0){ toast('Nenhum registro para exportar'); return; }
+    downloadBlob(JSON.stringify({versao:8, exportadoEm:new Date().toISOString(), fichas:entries}, null, 2), 'backup_entrevistas_'+todayISO()+'.json', 'application/json');
+    localStorage.setItem(BKP_KEY, JSON.stringify({em:new Date().toISOString(), qtd:entries.length}));
+    refreshBackupWarn();
+    toast('Backup gerado — guarde este arquivo');
+  });
+  document.getElementById('import-backup').addEventListener('click', function(){
+    closeSheet();
+    document.getElementById('import-file').click();
+  });
+
   document.getElementById('backup-warn-btn').addEventListener('click', function(){
     downloadBlob(JSON.stringify({versao:7, exportadoEm:new Date().toISOString(), fichas:entries}, null, 2), 'backup_entrevistas_'+todayISO()+'.json', 'application/json');
     localStorage.setItem(BKP_KEY, JSON.stringify({em:new Date().toISOString(), qtd:entries.length}));
@@ -1437,16 +1663,6 @@
   });
 
   /* ---------- backup ---------- */
-  document.getElementById('backup-menu').addEventListener('click', function(){
-    var choice = prompt('Digite:\n1 = Exportar backup (arquivo .json)\n2 = Importar backup');
-    if(choice==='1'){
-      if(entries.length===0){ toast('Nenhum registro para exportar'); return; }
-      downloadBlob(JSON.stringify({versao:7, exportadoEm:new Date().toISOString(), fichas:entries}, null, 2), 'backup_entrevistas_'+todayISO()+'.json', 'application/json');
-      localStorage.setItem(BKP_KEY, JSON.stringify({em:new Date().toISOString(), qtd:entries.length}));
-      refreshBackupWarn();
-      toast('Backup gerado — guarde este arquivo');
-    } else if(choice==='2'){ document.getElementById('import-file').click(); }
-  });
   document.getElementById('import-file').addEventListener('change', function(ev){
     var file = ev.target.files && ev.target.files[0];
     if(!file) return;
